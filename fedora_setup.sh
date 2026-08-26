@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V7 ULTIMATE FIX)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V8 PERFECT)
 # ==============================================================================
 set -e
 
-echo "🚀 Starting Fedora Master Setup Script (Niri + ALL 100% Native Packages)..."
+echo "🚀 Starting Fedora Master Setup Script (Niri + Native Apps + VMware)..."
 
 # ------------------------------------------------------------------------------
 # 1. UPDATE SYSTEM & INSTALL RPM REPOSITORIES
@@ -156,35 +156,45 @@ cd "$HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 6. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA)
+# 6. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA) & 100% NATIVE PERMISSIONS
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications (Sober Roblox, Viber, PrismLauncher, Czkawka)..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
 sudo flatpak update --appstream || true
 
-# Install Flatpaks one by one to ensure zero failure
-echo "📥 Installing Sober (Roblox Player)..."
+# Install Flatpaks seamlessly
 sudo flatpak install -y flathub org.vinegarhq.Sober || true
-
-echo "📥 Installing PrismLauncher..."
 sudo flatpak install -y flathub org.prismlauncher.PrismLauncher || true
-
-echo "📥 Installing ProtonUp-Qt..."
 sudo flatpak install -y flathub net.davidhi.ProtonUp-Qt || true
-
-echo "📥 Installing Czkawka Cleaner..."
 sudo flatpak install -y flathub com.github.qarmin.czkawka || true
-
-echo "📥 Installing Viber..."
 sudo flatpak install -y flathub com.viber.Viber || true
 
-echo "🔓 Unlocking Flatpak restrictions globally (Drag & Drop, Mic, File System access)..."
-sudo flatpak override --filesystem=host --device=all --share=ipc --socket=wayland --socket=x11 --socket=pulseaudio || true
+echo "🔓 Unlocking FULL system access permissions for Flatpaks (Operating 100% like native apps)..."
+sudo flatpak override --global --filesystem=host --filesystem=etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
+flatpak override --user --filesystem=host --filesystem=etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
 
 # ------------------------------------------------------------------------------
-# 7. AUTOMATED VMWARE WORKSTATION KERNEL MODULE BUILDER & INSTALLER
+# 7. AUTOMATED VMWARE WORKSTATION INSTALLATION (JETFIR3 SCRIPT) & MODULE COMPILATION
 # ------------------------------------------------------------------------------
-echo "💻 Setting up VMware Workstation kernel modules build script..."
+echo "💻 Setting up VMware Workstation..."
+if ! command -v vmware &> /dev/null; then
+    echo "📥 Downloading VMware Workstation via jetfir3 script..."
+    TMP_VM=$(mktemp -d)
+    cd "$TMP_VM"
+    curl -fsSL https://gist.githubusercontent.com/jetfir3/e25e74a42e7c7ac2c808a537b12dc768/raw/download_workstation.sh -o download_workstation.sh || true
+    if [ -f download_workstation.sh ]; then
+        chmod +x download_workstation.sh
+        ./download_workstation.sh -v 17.6.4 || ./download_workstation.sh || true
+        VM_BUNDLE=$(ls VMware-Workstation-*.bundle 2>/dev/null | head -n 1 || true)
+        if [ -n "$VM_BUNDLE" ]; then
+            sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
+        fi
+    fi
+    cd "$HOME"
+    rm -rf "$TMP_VM"
+fi
+
+# Build VMware kernel modules for Linux 6.x
 mkdir -p "$HOME/.local/bin"
 cat << 'EOF' > "$HOME/.local/bin/build-vmware-modules.sh"
 #!/usr/bin/env bash
@@ -197,6 +207,7 @@ cd vmware-host-modules
 git checkout workstation-$(vmware --version 2>/dev/null | awk '{print $3}') || git checkout master
 make
 sudo make install
+sudo systemctl enable --now vmware-USBArbitrator.service 2>/dev/null || true
 sudo vmware-networks --start || true
 echo "✅ VMware modules built successfully!"
 EOF
@@ -207,9 +218,9 @@ if command -v vmware &> /dev/null; then
 fi
 
 # ------------------------------------------------------------------------------
-# 8. SDDM DISPLAY MANAGER DEFAULT SESSION SETUP (DEFAULT TO NIRI ON BOOT)
+# 8. SDDM & ACCOUNTS SERVICE DEFAULT SESSION SETUP (FORCE NIRI ON BOOT)
 # ------------------------------------------------------------------------------
-echo "🖥️ Setting Niri as default Wayland session in SDDM..."
+echo "🖥️ Forcing Niri as default Wayland desktop session in SDDM and AccountsService..."
 sudo mkdir -p /etc/sddm.conf.d
 cat << 'EOF' | sudo tee /etc/sddm.conf.d/niri-session.conf > /dev/null
 [Desktop]
@@ -217,6 +228,19 @@ Session=niri.desktop
 
 [Autologin]
 Session=niri.desktop
+EOF
+
+# Update AccountsService for all users to force Niri session
+for user_path in /var/lib/AccountsService/users/*; do
+    if [ -f "$user_path" ]; then
+        sudo sed -i 's/Session=.*/Session=niri/' "$user_path" || true
+    fi
+done
+
+# Ensure ~/.dmrc has Session=niri
+cat << 'EOF' > "$HOME/.dmrc"
+[Desktop]
+Session=niri
 EOF
 
 # Ensure wayland sessions directory has niri.desktop
