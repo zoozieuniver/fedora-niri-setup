@@ -189,7 +189,7 @@ flatpak override --user --filesystem=host --filesystem=host-etc --device=all --s
 # 7. VMWARE WORKSTATION INSTALLER & MODULE BUILDER
 # ------------------------------------------------------------------------------
 echo "💻 Setting up VMware Workstation..."
-VM_BUNDLE=$(find "$USER_HOME" "$SCRIPT_DIR" /tmp /home/zoozie_fedora -maxdepth 2 -name "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
+VM_BUNDLE=$(find "$USER_HOME" /tmp "$SCRIPT_DIR" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
 
 if [ -z "$VM_BUNDLE" ] && ! command -v vmware &> /dev/null; then
     echo "📥 Downloading VMware Workstation via jetfir3 script..."
@@ -198,11 +198,8 @@ if [ -z "$VM_BUNDLE" ] && ! command -v vmware &> /dev/null; then
     curl -fsSL https://gist.githubusercontent.com/jetfir3/e25e74a42e7c7ac2c808a537b12dc768/raw/download_workstation.sh -o download_workstation.sh || true
     if [ -f download_workstation.sh ]; then
         chmod +x download_workstation.sh
-        ./download_workstation.sh -v 17.6.4 || ./download_workstation.sh || true
-        VM_BUNDLE=$(ls VMware-Workstation-*.bundle 2>/dev/null | head -n 1 || true)
-        if [ -n "$VM_BUNDLE" ]; then
-            VM_BUNDLE="$TMP_VM/$VM_BUNDLE"
-        fi
+        bash download_workstation.sh -v 17.6.4 || bash download_workstation.sh || true
+        VM_BUNDLE=$(find "$TMP_VM" "$USER_HOME" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
     fi
 fi
 
