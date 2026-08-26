@@ -189,7 +189,9 @@ flatpak override --user --filesystem=host --filesystem=host-etc --device=all --s
 # 7. VMWARE WORKSTATION INSTALLER & MODULE BUILDER
 # ------------------------------------------------------------------------------
 echo "💻 Setting up VMware Workstation..."
-if ! command -v vmware &> /dev/null; then
+VM_BUNDLE=$(find "$USER_HOME" "$SCRIPT_DIR" /tmp /home/zoozie_fedora -maxdepth 2 -name "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
+
+if [ -z "$VM_BUNDLE" ] && ! command -v vmware &> /dev/null; then
     echo "📥 Downloading VMware Workstation via jetfir3 script..."
     TMP_VM=$(mktemp -d)
     cd "$TMP_VM"
@@ -199,11 +201,14 @@ if ! command -v vmware &> /dev/null; then
         ./download_workstation.sh -v 17.6.4 || ./download_workstation.sh || true
         VM_BUNDLE=$(ls VMware-Workstation-*.bundle 2>/dev/null | head -n 1 || true)
         if [ -n "$VM_BUNDLE" ]; then
-            sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
+            VM_BUNDLE="$TMP_VM/$VM_BUNDLE"
         fi
     fi
-    cd "$HOME"
-    rm -rf "$TMP_VM"
+fi
+
+if [ -n "$VM_BUNDLE" ] && [ -f "$VM_BUNDLE" ] && ! command -v vmware &> /dev/null; then
+    echo "⚙️ Executing VMware installer bundle: $VM_BUNDLE..."
+    sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
 fi
 
 # Build VMware kernel modules for Linux 6.x
