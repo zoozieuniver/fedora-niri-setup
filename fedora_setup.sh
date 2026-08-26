@@ -4,11 +4,15 @@
 # ==============================================================================
 set -e
 
-# Enable full execution logging to ~/fedora_setup.log
-LOGFILE="$HOME/fedora_setup.log"
-exec > >(tee -i "$LOGFILE") 2>&1
+# Enable full execution logging to /tmp/fedora_setup.log and ~/fedora_setup.log
+USER_HOME=$(eval echo "~${SUDO_USER:-$USER}")
+LOGFILE="/tmp/fedora_setup.log"
+USER_LOGFILE="$USER_HOME/fedora_setup.log"
 
-echo "🚀 Starting Fedora Master Setup Script (Logging to $LOGFILE)..."
+touch "$LOGFILE" "$USER_LOGFILE" 2>/dev/null || true
+exec > >(tee -i "$LOGFILE" "$USER_LOGFILE") 2>&1
+
+echo "🚀 Starting Fedora Master Setup Script (Logging to $LOGFILE and $USER_LOGFILE)..."
 
 # ------------------------------------------------------------------------------
 # 1. UPDATE SYSTEM & INSTALL RPM REPOSITORIES
