@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V5 ULTIMATE DNF5)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V6 FINAL PERFECT)
 # ==============================================================================
 set -e
 
-echo "🚀 Starting Fedora Master Setup Script (Niri + ALL 100% Packages)..."
+echo "🚀 Starting Fedora Master Setup Script (Niri + ALL 100% Native Packages)..."
 
 # ------------------------------------------------------------------------------
-# 1. UPDATE SYSTEM & INSTALL RPM REPOSITORIES (RPM FUSION & ONLYOFFICE)
+# 1. UPDATE SYSTEM & INSTALL RPM REPOSITORIES
 # ------------------------------------------------------------------------------
-echo "📦 Updating system and adding RPM repositories..."
+echo "📦 Updating system and enabling RPM repositories..."
 sudo dnf update -y || true
 sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm || true
 
-# Add Cisco OpenH264 & OnlyOffice RPM repository (DNF5 compatible syntax)
-sudo dnf config-manager enable fedora-cisco-openh264 2>/dev/null || sudo dnf config-manager --set-enabled fedora-cisco-openh264 2>/dev/null || true
-sudo dnf config-manager addrepo --overwrite https://download.onlyoffice.com/repo/onlyoffice.repo 2>/dev/null || sudo dnf config-manager --add-repo https://download.onlyoffice.com/repo/onlyoffice.repo 2>/dev/null || true
+# Enable Cisco OpenH264
+sudo dnf config-manager enable fedora-cisco-openh264 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 2. REMOVE UNNEEDED BLOAT FROM FEDORA KDE SPIN
@@ -67,6 +66,19 @@ if ! command -v zed &> /dev/null; then
     curl -fssSL https://zed.dev/install.sh | sh || true
 fi
 
+# Install Satty natively (pre-compiled binary release)
+if ! command -v satty &> /dev/null; then
+    echo "⚡ Installing Satty screenshot editor natively..."
+    SATTY_URL=$(curl -s https://api.github.com/repos/gabm/Satty/releases/latest | grep "browser_download_url.*x86_64.*tar.gz" | cut -d '"' -f 4 | head -n 1 || true)
+    if [ -n "$SATTY_URL" ]; then
+        curl -sL "$SATTY_URL" | tar -xz -C /tmp || true
+        if [ -f /tmp/satty ]; then
+            sudo mv /tmp/satty /usr/local/bin/satty
+            sudo chmod +x /usr/local/bin/satty
+        fi
+    fi
+fi
+
 # ------------------------------------------------------------------------------
 # 4. INSTALL 100% OF SYSTEM PACKAGES FROM NIXOS CONFIG
 # ------------------------------------------------------------------------------
@@ -96,16 +108,12 @@ sudo dnf install -y --skip-unavailable \
     krita \
     obs-studio \
     handbrake \
-    czkawka-gui \
     baobab \
     rpi-imager \
     chromium \
     telegram-desktop \
     steam \
-    prismlauncher \
-    protonup-qt \
     protontricks \
-    onlyoffice-desktopeditors \
     mangohud \
     gamemode \
     cups \
@@ -115,9 +123,9 @@ sudo dnf install -y --skip-unavailable \
     firewalld
 
 # ------------------------------------------------------------------------------
-# 5. NATIVE RPM DOWNLOADS (VESKTOP & HEROIC LAUNCHER FROM GITHUB RELEASES)
+# 5. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
 # ------------------------------------------------------------------------------
-echo "📦 Installing native RPM packages for Vesktop & Heroic Games Launcher..."
+echo "📦 Installing native RPM packages for Vesktop, Heroic Games Launcher & OnlyOffice..."
 TMP_RPM=$(mktemp -d)
 cd "$TMP_RPM"
 
@@ -137,17 +145,24 @@ if [ -n "$HEROIC_RPM_URL" ]; then
     sudo dnf install -y ./heroic.rpm || true
 fi
 
+# Download and install OnlyOffice Native RPM
+echo "📥 Downloading OnlyOffice Native RPM..."
+curl -sL "https://download.onlyoffice.com/install/desktop/editors/linux/onlyoffice-desktopeditors.x86_64.rpm" -o onlyoffice.rpm || true
+if [ -f onlyoffice.rpm ]; then
+    sudo dnf install -y ./onlyoffice.rpm || true
+fi
+
 cd "$HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 6. FLATPAK SETUP (SOBER ROBLOX, VIBER, CZKAWKA)
+# 6. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA)
 # ------------------------------------------------------------------------------
-echo "🌐 Configuring Flatpak applications (Sober Roblox, Viber, Czkawka)..."
+echo "🌐 Configuring Flatpak applications (Sober Roblox, Viber, PrismLauncher, Czkawka)..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
 
-# Install Sober (Roblox Player), Viber & Czkawka from Flathub
-sudo flatpak install -y flathub org.vinegarhq.Sober com.viber.Viber com.github.qarmin.czkawka org.gnome.Satty || true
+# Install Flatpaks seamlessly
+sudo flatpak install -y flathub org.vinegarhq.Sober com.viber.Viber org.prismlauncher.PrismLauncher net.davidhi.ProtonUp-Qt com.github.qarmin.czkawka || true
 
 echo "🔓 Unlocking Flatpak restrictions globally (Drag & Drop, Mic, File System access)..."
 sudo flatpak override --filesystem=host --device=all --share=ipc --socket=wayland --socket=x11 --socket=pulseaudio || true
