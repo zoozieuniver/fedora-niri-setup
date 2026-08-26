@@ -101,6 +101,9 @@ sudo dnf install -y --skip-unavailable \
     SwayNotificationCenter \
     wofi \
     kitty \
+    thunar \
+    thunar-archive-plugin \
+    dolphin \
     grim \
     slurp \
     wl-clipboard \
