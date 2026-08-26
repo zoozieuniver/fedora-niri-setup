@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V9 LOGGING & FIXES)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V10 PERFECT LOG ANALYSIS)
 # ==============================================================================
 set -e
 
@@ -11,9 +11,12 @@ USER_LOGFILE="$USER_HOME/fedora_setup.log"
 
 touch "$LOGFILE" "$USER_LOGFILE" 2>/dev/null || true
 exec > >(tee -i "$LOGFILE" "$USER_LOGFILE") 2>&1
-set -x # Enable 100% verbose shell tracing of ALL executed commands and outputs
+set -x # Enable 100% verbose shell tracing
 
-echo "🚀 Starting Fedora Master Setup Script (Logging EVERYTHING to $LOGFILE and $USER_LOGFILE)..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TARGET_USER="${SUDO_USER:-$USER}"
+
+echo "🚀 Starting Fedora Master Setup Script for user: $TARGET_USER..."
 
 # ------------------------------------------------------------------------------
 # 1. UPDATE SYSTEM & INSTALL RPM REPOSITORIES
@@ -26,10 +29,10 @@ sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-rel
 sudo dnf config-manager enable fedora-cisco-openh264 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 2. REMOVE ALL KDE BLOAT & SLOP (KMahjongg, KPat, KMines, DragonPlayer, etc.)
+# 2. REMOVE ALL KDE BLOAT & GAMES SLOP
 # ------------------------------------------------------------------------------
 echo "🧹 Removing KDE bloat & games slop..."
-sudo dnf remove -y kmahjongg kpat kmines dragonplayer ktorrent kmail libreoffice* gnome-tour gnome-boxes mediawriter || true
+sudo dnf remove -y kmahjongg kpat kmines dragonplayer ktorrent kmail "libreoffice*" gnome-tour gnome-boxes mediawriter || true
 
 # ------------------------------------------------------------------------------
 # 3. INSTALL COMPILERS, DEV TOOLS, QT/KDE INTEGRATION & UTILITIES
@@ -183,25 +186,24 @@ sudo flatpak override --filesystem=host --filesystem=host-etc --device=all --sha
 flatpak override --user --filesystem=host --filesystem=host-etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
 
 # ------------------------------------------------------------------------------
-# 7. AUTOMATED VMWARE WORKSTATION INSTALLATION & MODULE COMPILATION
+# 7. VMWARE WORKSTATION INSTALLER & MODULE BUILDER
 # ------------------------------------------------------------------------------
 echo "💻 Setting up VMware Workstation..."
 if ! command -v vmware &> /dev/null; then
     echo "📥 Downloading VMware Workstation via jetfir3 script..."
-    cd "$HOME"
+    TMP_VM=$(mktemp -d)
+    cd "$TMP_VM"
     curl -fsSL https://gist.githubusercontent.com/jetfir3/e25e74a42e7c7ac2c808a537b12dc768/raw/download_workstation.sh -o download_workstation.sh || true
     if [ -f download_workstation.sh ]; then
         chmod +x download_workstation.sh
         ./download_workstation.sh -v 17.6.4 || ./download_workstation.sh || true
-        rm -f download_workstation.sh
+        VM_BUNDLE=$(ls VMware-Workstation-*.bundle 2>/dev/null | head -n 1 || true)
+        if [ -n "$VM_BUNDLE" ]; then
+            sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
+        fi
     fi
-    
-    VM_BUNDLE=$(find "$HOME" -maxdepth 2 -name "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
-    if [ -n "$VM_BUNDLE" ]; then
-        echo "⚙️ Executing VMware installer bundle: $VM_BUNDLE..."
-        sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
-        rm -f "$VM_BUNDLE"
-    fi
+    cd "$HOME"
+    rm -rf "$TMP_VM"
 fi
 
 # Build VMware kernel modules for Linux 6.x
@@ -242,20 +244,16 @@ Session=niri.desktop
 Session=niri.desktop
 EOF
 
-# Update main sddm.conf
-if [ -f /etc/sddm.conf ]; then
-    sudo sed -i 's/Session=.*/Session=niri.desktop/' /etc/sddm.conf || true
-fi
-
-# Update AccountsService for all users to force Niri session
-for user_path in /var/lib/AccountsService/users/*; do
-    if [ -f "$user_path" ]; then
-        sudo sed -i 's/Session=.*/Session=niri/' "$user_path" || true
-    fi
-done
+# Write directly to AccountsService user file
+sudo mkdir -p /var/lib/AccountsService/users
+cat << EOF | sudo tee "/var/lib/AccountsService/users/$TARGET_USER" > /dev/null
+[User]
+Session=niri
+SystemAccount=false
+EOF
 
 # Ensure ~/.dmrc has Session=niri
-cat << 'EOF' > "$HOME/.dmrc"
+cat << 'EOF' > "$USER_HOME/.dmrc"
 [Desktop]
 Session=niri
 EOF
@@ -292,28 +290,36 @@ sudo firewall-cmd --reload || true
 # 10. RESTORE NIRI DOTFILES, ZED CONFIG & ADAPT SCRIPTS FOR FEDORA
 # ------------------------------------------------------------------------------
 echo "🎨 Restoring Niri dotfiles, Zed config, and assets..."
-if [ -f "$HOME/niri-dotfiles-backup.tar.gz" ]; then
-    tar -xzf "$HOME/niri-dotfiles-backup.tar.gz" -C "$HOME"
-    echo "✅ Dotfiles and Zed configuration restored!"
+BACKUP_TAR="$SCRIPT_DIR/niri-dotfiles-backup.tar.gz"
+if [ ! -f "$BACKUP_TAR" ]; then
+    BACKUP_TAR="$USER_HOME/niri-dotfiles-backup.tar.gz"
 fi
 
-mkdir -p "$HOME/.config/zed"
-mkdir -p "$HOME/.local/bin"
-if [ -f "$HOME/.local/bin/set-fifine-default.sh" ]; then
-    chmod +x "$HOME/.local/bin/set-fifine-default.sh"
+if [ -f "$BACKUP_TAR" ]; then
+    echo "📦 Unpacking dotfiles & Zed configs from: $BACKUP_TAR"
+    tar -xzf "$BACKUP_TAR" -C "$USER_HOME"
+    echo "✅ Dotfiles and Zed configuration successfully restored to $USER_HOME!"
+else
+    echo "⚠️ Warning: $BACKUP_TAR not found!"
+fi
+
+mkdir -p "$USER_HOME/.config/zed"
+mkdir -p "$USER_HOME/.local/bin"
+if [ -f "$USER_HOME/.local/bin/set-fifine-default.sh" ]; then
+    chmod +x "$USER_HOME/.local/bin/set-fifine-default.sh"
 fi
 
 # Steam dev config (64 HTTP streams)
-mkdir -p "$HOME/.local/share/Steam"
-cat << 'EOF' > "$HOME/.local/share/Steam/steam_dev.cfg"
+mkdir -p "$USER_HOME/.local/share/Steam"
+cat << 'EOF' > "$USER_HOME/.local/share/Steam/steam_dev.cfg"
 @nCSClientReadBufferSizeBytes 33554432
 @ClientMinHTTPReqCount 64
 @c_bEnableHTTP3 0
 EOF
 
 # Steam desktop launcher with AMD ACO Vulkan compiler
-mkdir -p "$HOME/.local/share/applications"
-cat << 'EOF' > "$HOME/.local/share/applications/steam.desktop"
+mkdir -p "$USER_HOME/.local/share/applications"
+cat << 'EOF' > "$USER_HOME/.local/share/applications/steam.desktop"
 [Desktop Entry]
 Name=Steam
 Comment=Application for managing and playing games on Steam
@@ -330,21 +336,21 @@ EOF
 # 11. BTRFS NO-DATA-COW (+C) FOR GAMES, DOWNLOADS & STEAM
 # ------------------------------------------------------------------------------
 echo "🚀 Creating Games directory and applying Btrfs nodatacow (+C) attributes..."
-mkdir -p "$HOME/Downloads"
-mkdir -p "$HOME/Games"
-mkdir -p "$HOME/Games/Heroic"
-mkdir -p "$HOME/Games/Steam"
-mkdir -p "$HOME/.local/share/Steam/steamapps/downloading"
-mkdir -p "$HOME/.local/share/Steam/steamapps/common"
-mkdir -p "$HOME/.var/app"
+mkdir -p "$USER_HOME/Downloads"
+mkdir -p "$USER_HOME/Games"
+mkdir -p "$USER_HOME/Games/Heroic"
+mkdir -p "$USER_HOME/Games/Steam"
+mkdir -p "$USER_HOME/.local/share/Steam/steamapps/downloading"
+mkdir -p "$USER_HOME/.local/share/Steam/steamapps/common"
+mkdir -p "$USER_HOME/.var/app"
 
-sudo chattr +C "$HOME/Downloads" || true
-sudo chattr +C "$HOME/Games" || true
-sudo chattr +C "$HOME/Games/Heroic" || true
-sudo chattr +C "$HOME/Games/Steam" || true
-sudo chattr +C "$HOME/.local/share/Steam/steamapps/downloading" || true
-sudo chattr +C "$HOME/.local/share/Steam/steamapps/common" || true
-sudo chattr +C "$HOME/.var/app" || true
+sudo chattr +C "$USER_HOME/Downloads" || true
+sudo chattr +C "$USER_HOME/Games" || true
+sudo chattr +C "$USER_HOME/Games/Heroic" || true
+sudo chattr +C "$USER_HOME/Games/Steam" || true
+sudo chattr +C "$USER_HOME/.local/share/Steam/steamapps/downloading" || true
+sudo chattr +C "$USER_HOME/.local/share/Steam/steamapps/common" || true
+sudo chattr +C "$USER_HOME/.var/app" || true
 
 # ------------------------------------------------------------------------------
 # 12. PRINTER SETUP (HP LaserJet 2420n @ 192.168.66.10 PCL6)
@@ -382,7 +388,8 @@ fi
 # 14. GRUB CONFIGURATION
 # ------------------------------------------------------------------------------
 echo "⚙️ Configuring GRUB for Windows dual-boot and kernel parameters..."
-sudo grub2-editenv - set kernelopts="$(sudo grub2-editenv - list 2>/dev/null | grep kernelopts | cut -d= -f2-) pcie_aspm=off" 2>/dev/null || true
+CURRENT_KOPTS="$(sudo grub2-editenv - list 2>/dev/null | grep kernelopts | cut -d= -f2- | sed 's/pcie_aspm=off//g' || true)"
+sudo grub2-editenv - set "kernelopts=$CURRENT_KOPTS pcie_aspm=off" 2>/dev/null || true
 
 if [ -f /etc/default/grub ] && ! grep -q "GRUB_DISABLE_OS_PROBER=false" /etc/default/grub; then
     echo 'GRUB_DISABLE_OS_PROBER=false' | sudo tee -a /etc/default/grub
@@ -397,6 +404,6 @@ fi
 
 echo ""
 echo "🎉 ==========================================================================="
-echo "🎉   FEDORA SETUP COMPLETE! LOGFILE SAVED TO: $LOGFILE"
+echo "🎉   FEDORA SETUP COMPLETE! LOGFILE SAVED TO: $LOGFILE and $USER_LOGFILE"
 echo "🎉   REBOOT TO ENTER YOUR CUSTOM NIRI DESKTOP!"
 echo "🎉 ==========================================================================="
