@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V8 PERFECT)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V9 LOGGING & FIXES)
 # ==============================================================================
 set -e
 
-echo "🚀 Starting Fedora Master Setup Script (Niri + Native Apps + VMware)..."
+# Enable full execution logging to ~/fedora_setup.log
+LOGFILE="$HOME/fedora_setup.log"
+exec > >(tee -i "$LOGFILE") 2>&1
+
+echo "🚀 Starting Fedora Master Setup Script (Logging to $LOGFILE)..."
 
 # ------------------------------------------------------------------------------
 # 1. UPDATE SYSTEM & INSTALL RPM REPOSITORIES
@@ -170,28 +174,29 @@ sudo flatpak install -y flathub com.github.qarmin.czkawka || true
 sudo flatpak install -y flathub com.viber.Viber || true
 
 echo "🔓 Unlocking FULL system access permissions for Flatpaks (Operating 100% like native apps)..."
-sudo flatpak override --global --filesystem=host --filesystem=etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
-flatpak override --user --filesystem=host --filesystem=etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
+sudo flatpak override --filesystem=host --filesystem=host-etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
+flatpak override --user --filesystem=host --filesystem=host-etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
 
 # ------------------------------------------------------------------------------
-# 7. AUTOMATED VMWARE WORKSTATION INSTALLATION (JETFIR3 SCRIPT) & MODULE COMPILATION
+# 7. AUTOMATED VMWARE WORKSTATION INSTALLATION & MODULE COMPILATION
 # ------------------------------------------------------------------------------
 echo "💻 Setting up VMware Workstation..."
 if ! command -v vmware &> /dev/null; then
     echo "📥 Downloading VMware Workstation via jetfir3 script..."
-    TMP_VM=$(mktemp -d)
-    cd "$TMP_VM"
+    cd "$HOME"
     curl -fsSL https://gist.githubusercontent.com/jetfir3/e25e74a42e7c7ac2c808a537b12dc768/raw/download_workstation.sh -o download_workstation.sh || true
     if [ -f download_workstation.sh ]; then
         chmod +x download_workstation.sh
         ./download_workstation.sh -v 17.6.4 || ./download_workstation.sh || true
-        VM_BUNDLE=$(ls VMware-Workstation-*.bundle 2>/dev/null | head -n 1 || true)
-        if [ -n "$VM_BUNDLE" ]; then
-            sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
-        fi
+        rm -f download_workstation.sh
     fi
-    cd "$HOME"
-    rm -rf "$TMP_VM"
+    
+    VM_BUNDLE=$(find "$HOME" -maxdepth 2 -name "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
+    if [ -n "$VM_BUNDLE" ]; then
+        echo "⚙️ Executing VMware installer bundle: $VM_BUNDLE..."
+        sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
+        rm -f "$VM_BUNDLE"
+    fi
 fi
 
 # Build VMware kernel modules for Linux 6.x
@@ -229,6 +234,11 @@ Session=niri.desktop
 [Autologin]
 Session=niri.desktop
 EOF
+
+# Update main sddm.conf
+if [ -f /etc/sddm.conf ]; then
+    sudo sed -i 's/Session=.*/Session=niri.desktop/' /etc/sddm.conf || true
+fi
 
 # Update AccountsService for all users to force Niri session
 for user_path in /var/lib/AccountsService/users/*; do
@@ -380,5 +390,6 @@ fi
 
 echo ""
 echo "🎉 ==========================================================================="
-echo "🎉   FEDORA SETUP COMPLETE! REBOOT TO ENTER YOUR CUSTOM NIRI DESKTOP!"
+echo "🎉   FEDORA SETUP COMPLETE! LOGFILE SAVED TO: $LOGFILE"
+echo "🎉   REBOOT TO ENTER YOUR CUSTOM NIRI DESKTOP!"
 echo "🎉 ==========================================================================="
