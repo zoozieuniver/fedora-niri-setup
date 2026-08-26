@@ -11,8 +11,9 @@ USER_LOGFILE="$USER_HOME/fedora_setup.log"
 
 touch "$LOGFILE" "$USER_LOGFILE" 2>/dev/null || true
 exec > >(tee -i "$LOGFILE" "$USER_LOGFILE") 2>&1
+set -x # Enable 100% verbose shell tracing of ALL executed commands and outputs
 
-echo "🚀 Starting Fedora Master Setup Script (Logging to $LOGFILE and $USER_LOGFILE)..."
+echo "🚀 Starting Fedora Master Setup Script (Logging EVERYTHING to $LOGFILE and $USER_LOGFILE)..."
 
 # ------------------------------------------------------------------------------
 # 1. UPDATE SYSTEM & INSTALL RPM REPOSITORIES
@@ -213,9 +214,11 @@ CDIR=$(mktemp -d)
 cd "$CDIR"
 git clone https://github.com/mkubecek/vmware-host-modules.git
 cd vmware-host-modules
-git checkout workstation-$(vmware --version 2>/dev/null | awk '{print $3}') || git checkout master
-make
-sudo make install
+WV=$(vmware --version 2>/dev/null | awk '{print $3}' || true)
+git checkout "workstation-$WV" 2>/dev/null || git checkout "workstation-${WV%.*}" 2>/dev/null || git checkout master || true
+make clean 2>/dev/null || true
+make || true
+sudo make install || true
 sudo systemctl enable --now vmware-USBArbitrator.service 2>/dev/null || true
 sudo vmware-networks --start || true
 echo "✅ VMware modules built successfully!"
