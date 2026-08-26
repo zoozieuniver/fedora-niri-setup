@@ -305,6 +305,15 @@ else
     echo "⚠️ Warning: $BACKUP_TAR not found!"
 fi
 
+# If running inside a Virtual Machine, automatically convert Niri Mod key to Alt to prevent host collisions
+if systemd-detect-virt &>/dev/null; then
+    echo "🖥️ Virtual Machine detected ($(systemd-detect-virt)): Converting Niri Mod key from Super to Alt to eliminate host Niri collisions..."
+    if [ -f "$USER_HOME/.config/niri/config.kdl" ]; then
+        sed -i 's/"Mod4"/"Alt"/g' "$USER_HOME/.config/niri/config.kdl" || true
+        sed -i 's/Mod4/Alt/g' "$USER_HOME/.config/niri/config.kdl" || true
+    fi
+fi
+
 mkdir -p "$USER_HOME/.config/zed"
 mkdir -p "$USER_HOME/.local/bin"
 if [ -f "$USER_HOME/.local/bin/set-fifine-default.sh" ]; then
