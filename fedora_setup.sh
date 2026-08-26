@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V6 FINAL PERFECT)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V7 ULTIMATE FIX)
 # ==============================================================================
 set -e
 
@@ -17,10 +17,10 @@ sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-rel
 sudo dnf config-manager enable fedora-cisco-openh264 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 2. REMOVE UNNEEDED BLOAT FROM FEDORA KDE SPIN
+# 2. REMOVE ALL KDE BLOAT & SLOP (KMahjongg, KPat, KMines, DragonPlayer, etc.)
 # ------------------------------------------------------------------------------
-echo "🧹 Cleaning up unnecessary bloatware..."
-sudo dnf remove -y libreoffice* gnome-tour gnome-boxes mediawriter kmines dragonplayer ktorrent kmail || true
+echo "🧹 Removing KDE bloat & games slop..."
+sudo dnf remove -y kmahjongg kpat kmines dragonplayer ktorrent kmail libreoffice* gnome-tour gnome-boxes mediawriter || true
 
 # ------------------------------------------------------------------------------
 # 3. INSTALL COMPILERS, DEV TOOLS, QT/KDE INTEGRATION & UTILITIES
@@ -160,15 +160,29 @@ rm -rf "$TMP_RPM"
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications (Sober Roblox, Viber, PrismLauncher, Czkawka)..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+sudo flatpak update --appstream || true
 
-# Install Flatpaks seamlessly
-sudo flatpak install -y flathub org.vinegarhq.Sober com.viber.Viber org.prismlauncher.PrismLauncher net.davidhi.ProtonUp-Qt com.github.qarmin.czkawka || true
+# Install Flatpaks one by one to ensure zero failure
+echo "📥 Installing Sober (Roblox Player)..."
+sudo flatpak install -y flathub org.vinegarhq.Sober || true
+
+echo "📥 Installing PrismLauncher..."
+sudo flatpak install -y flathub org.prismlauncher.PrismLauncher || true
+
+echo "📥 Installing ProtonUp-Qt..."
+sudo flatpak install -y flathub net.davidhi.ProtonUp-Qt || true
+
+echo "📥 Installing Czkawka Cleaner..."
+sudo flatpak install -y flathub com.github.qarmin.czkawka || true
+
+echo "📥 Installing Viber..."
+sudo flatpak install -y flathub com.viber.Viber || true
 
 echo "🔓 Unlocking Flatpak restrictions globally (Drag & Drop, Mic, File System access)..."
 sudo flatpak override --filesystem=host --device=all --share=ipc --socket=wayland --socket=x11 --socket=pulseaudio || true
 
 # ------------------------------------------------------------------------------
-# 7. AUTOMATED VMWARE WORKSTATION KERNEL MODULE BUILDER
+# 7. AUTOMATED VMWARE WORKSTATION KERNEL MODULE BUILDER & INSTALLER
 # ------------------------------------------------------------------------------
 echo "💻 Setting up VMware Workstation kernel modules build script..."
 mkdir -p "$HOME/.local/bin"
