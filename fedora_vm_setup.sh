@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% LOCAL ARCHIVE & NIRI DEBLOAT INTEGRATION)
+# FEDORA VM MASTER SETUP SCRIPT (100% COMPLETE & GRUB RUNLEVEL FIX)
 # ==============================================================================
 set -e
 
@@ -30,7 +30,16 @@ fi
 echo "🚀 Starting Fedora VM Master Setup Script for user: $REAL_USER ($USER_HOME)..."
 
 # ------------------------------------------------------------------------------
-# 1. UPDATE SYSTEM & ENABLE RPM FUSION, COPR & FLATHUB REPOSITORIES
+# 1. REMOVE RUNLEVEL "3" OVERRIDE FROM GRUB COMMAND LINE
+# ------------------------------------------------------------------------------
+echo "⚙️ Purging runlevel 3 override from GRUB boot options..."
+if grub2-editenv - list 2>/dev/null | grep -q "kernelopts.* 3"; then
+    CURRENT_KOPTS="$(sudo grub2-editenv - list 2>/dev/null | grep kernelopts | cut -d= -f2- | sed 's/ 3//g' || true)"
+    sudo grub2-editenv - set "kernelopts=$CURRENT_KOPTS" 2>/dev/null || true
+fi
+
+# ------------------------------------------------------------------------------
+# 2. UPDATE SYSTEM & ENABLE RPM FUSION, COPR & FLATHUB REPOSITORIES
 # ------------------------------------------------------------------------------
 echo "📦 Updating system and enabling RPM repositories..."
 sudo dnf update -y || true
@@ -43,7 +52,7 @@ sudo dnf config-manager enable fedora-cisco-openh264 2>/dev/null || true
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
 
 # ------------------------------------------------------------------------------
-# 2. CREATE OFFICIAL XDG SYSTEM DIRECTORIES (DOWNLOADS, DOCUMENTS, PICTURES)
+# 3. CREATE OFFICIAL XDG SYSTEM DIRECTORIES (DOWNLOADS, DOCUMENTS, PICTURES)
 # ------------------------------------------------------------------------------
 echo "📁 Creating official XDG user directories..."
 sudo dnf install -y xdg-user-dirs || true
@@ -51,7 +60,7 @@ sudo -u "$REAL_USER" HOME="$USER_HOME" xdg-user-dirs-update --force 2>/dev/null 
 mkdir -p "$USER_HOME/Projects" "$USER_HOME/Games" "$USER_HOME/Downloads" "$USER_HOME/Documents" "$USER_HOME/Pictures" "$USER_HOME/Music" "$USER_HOME/Videos" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 3. RESOLVE RPM CONFLICTS & INSTALL SYSTEM PACKAGES
+# 4. RESOLVE RPM CONFLICTS & INSTALL SYSTEM PACKAGES
 # ------------------------------------------------------------------------------
 echo "🧹 Resolving pre-installed Fedora 44 kmime package conflicts..."
 sudo dnf remove -y kmime kmime-libs 2>/dev/null || true
@@ -163,7 +172,7 @@ if ! command -v satty &> /dev/null; then
 fi
 
 # ------------------------------------------------------------------------------
-# 4. LOCAL ARCHIVE INTEGRATIONS (PROTONUP-QT APPIMAGE & DAVINCI RESOLVE ZIP)
+# 5. LOCAL ARCHIVE INTEGRATIONS (PROTONUP-QT APPIMAGE & DAVINCI RESOLVE ZIP)
 # ------------------------------------------------------------------------------
 echo "📦 Installing local AppImage & Zip archives (ProtonUp-Qt & DaVinci Resolve)..."
 
@@ -193,7 +202,7 @@ if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! command -v /opt/resolve/b
 fi
 
 # ------------------------------------------------------------------------------
-# 5. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
+# 6. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
 # ------------------------------------------------------------------------------
 echo "📦 Installing native RPM packages for Vesktop, Heroic Games Launcher & OnlyOffice..."
 TMP_RPM=$(mktemp -d)
@@ -223,7 +232,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 6. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, CZKAWKA, HELIUM, VIDEO-DOWNLOADER)
+# 7. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, CZKAWKA, HELIUM, VIDEO-DOWNLOADER)
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
@@ -244,7 +253,7 @@ flatpak override --user --filesystem=host --filesystem=host-etc --device=all --s
 sudo -u "$REAL_USER" HOME="$USER_HOME" xdg-settings set default-web-browser net.imput.Helium.desktop 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 7. VMWARE WORKSTATION KERNEL MODULES FROM LOCAL TAR.GZ ARCHIVE
+# 8. VMWARE WORKSTATION KERNEL MODULES FROM LOCAL TAR.GZ ARCHIVE
 # ------------------------------------------------------------------------------
 echo "⚙️ Building VMware host kernel modules (vmmon & vmnet) from local tar.gz..."
 VMWARE_TAR=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "vmware-host-modules-*.tar.gz" 2>/dev/null | head -n 1 || true)
@@ -270,7 +279,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_MOD"
 
 # ------------------------------------------------------------------------------
-# 8. UNPACK DOTFILES, THUNAR, KITTY, WAYBAR, WOFI CONFIGS & FONTS
+# 9. UNPACK DOTFILES, THUNAR, KITTY, WAYBAR, WOFI CONFIGS & FONTS
 # ------------------------------------------------------------------------------
 ARCHIVE_PATH="$USER_HOME/Downloads/all-customizations-and-dotfiles.tar.gz"
 [ -f "$ARCHIVE_PATH" ] || ARCHIVE_PATH="./all-customizations-and-dotfiles.tar.gz"
@@ -287,7 +296,7 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 9. CONVERT NIRI KEYBINDINGS TO Alt+ FOR VM COMPATIBILITY
+# 10. CONVERT NIRI KEYBINDINGS TO Alt+ FOR VM COMPATIBILITY
 # ------------------------------------------------------------------------------
 KBD_CONF="$USER_HOME/.config/niri/keybindings.kdl"
 if [ -f "$KBD_CONF" ]; then
@@ -297,7 +306,7 @@ if [ -f "$KBD_CONF" ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 10. REGISTER FONTS & KITTY BASH FASTFETCH INTEGRATION
+# 11. REGISTER FONTS & KITTY BASH FASTFETCH INTEGRATION
 # ------------------------------------------------------------------------------
 echo "🔤 Registering Monocraft fonts and Deltarune cursors..."
 fc-cache -fv 2>/dev/null || true
@@ -322,7 +331,7 @@ EOF
 fi
 
 # ------------------------------------------------------------------------------
-# 11. NETWORK BBR TUNING & BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
+# 12. NETWORK BBR TUNING & BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
 # ------------------------------------------------------------------------------
 echo "⚡ Applying Network BBR & Gigabit TCP buffer optimizations..."
 cat << 'EOF' | sudo tee /etc/sysctl.d/99-gigabit-bbr.conf > /dev/null
@@ -339,7 +348,7 @@ echo "🚀 Applying Btrfs nodatacow (+C) attributes..."
 sudo chattr +C "$USER_HOME/Downloads" "$USER_HOME/Games" "$USER_HOME/.var/app" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 12. PRINTER SETUP & FIREWALL RULES (TAILSCALE & STEAM)
+# 13. PRINTER SETUP & FIREWALL RULES (TAILSCALE & STEAM)
 # ------------------------------------------------------------------------------
 echo "🖨️ Configuring HP LaserJet 2420n Printer & Firewall..."
 sudo systemctl enable --now cups avahi-daemon 2>/dev/null || true
@@ -353,7 +362,7 @@ sudo firewall-cmd --permanent --add-port=25565/udp 2>/dev/null || true
 sudo firewall-cmd --reload 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 13. CONFIGURE SDDM DISPLAY MANAGER & SSH SERVICE
+# 14. CONFIGURE SDDM DISPLAY MANAGER & SSH SERVICE
 # ------------------------------------------------------------------------------
 echo "🖥️ Configuring SDDM Display Manager & SSH service for Niri..."
 sudo systemctl enable --now sshd 2>/dev/null || true
@@ -372,7 +381,7 @@ Session=niri.desktop
 EOF
 
 # ------------------------------------------------------------------------------
-# 14. PURGE ALL KDE PLASMA DESKTOP, K-APPS & FIREFOX COMPLETELY
+# 15. PURGE ALL KDE PLASMA DESKTOP, K-APPS & FIREFOX COMPLETELY
 # ------------------------------------------------------------------------------
 DEBLOAT_APPS=(
     plasma-desktop plasma-workspace plasma-workspace-wayland plasma-workspace-libs
@@ -396,7 +405,7 @@ done
 sudo dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 15. PERMISSIONS & FINISH
+# 16. PERMISSIONS & FINISH
 # ------------------------------------------------------------------------------
 sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/Projects" "$USER_HOME/Games" "$USER_HOME/fedora_vm_setup.log" 2>/dev/null || true
 
