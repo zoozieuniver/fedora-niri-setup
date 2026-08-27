@@ -96,6 +96,8 @@ fi
 # ------------------------------------------------------------------------------
 echo "🖥️ Installing Niri Desktop environment and ALL NixOS applications..."
 sudo dnf install -y --skip-unavailable \
+    sddm \
+    sddm-kcm \
     niri \
     waybar \
     SwayNotificationCenter \
