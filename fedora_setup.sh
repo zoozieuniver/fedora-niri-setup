@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V21 PERFECT)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V22 BULLETPROOF)
 # ==============================================================================
 set -e
 
@@ -172,7 +172,7 @@ fi
 # ------------------------------------------------------------------------------
 echo "📦 Installing local AppImage & Zip archives (ProtonUp-Qt & DaVinci Resolve)..."
 
-PROTONUP_APPIMAGE=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "ProtonUp-Qt-*.AppImage" 2>/dev/null | head -n 1 || true)
+PROTONUP_APPIMAGE=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "ProtonUp-Qt-*.AppImage" 2>/dev/null | head -n 1 || true)
 if [ -n "$PROTONUP_APPIMAGE" ] && [ -f "$PROTONUP_APPIMAGE" ]; then
     echo "⚙️ Installing local ProtonUp-Qt AppImage: $PROTONUP_APPIMAGE..."
     mkdir -p "$USER_HOME/.local/bin"
@@ -182,21 +182,72 @@ if [ -n "$PROTONUP_APPIMAGE" ] && [ -f "$PROTONUP_APPIMAGE" ]; then
     sudo chmod +x /usr/local/bin/protonup-qt
 fi
 
-DAVINCI_ZIP=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "DaVinci_Resolve_*.zip" 2>/dev/null | head -n 1 || true)
-if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! command -v /opt/resolve/bin/resolve &>/dev/null; then
-    echo "🎬 Installing local DaVinci Resolve archive: $DAVINCI_ZIP..."
-    TMP_DAVINCI=$(mktemp -d)
+DAVINCI_ZIP=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "DaVinci_Resolve_*.zip" 2>/dev/null | head -n 1 || true)
+if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! [ -d /opt/resolve ]; then
+    echo "🎬 Unpacking and installing local DaVinci Resolve archive: $DAVINCI_ZIP..."
+    TMP_DAVINCI="/tmp/davinci_unpack"
+    rm -rf "$TMP_DAVINCI"
+    mkdir -p "$TMP_DAVINCI"
     unzip -q "$DAVINCI_ZIP" -d "$TMP_DAVINCI" || true
     DAVINCI_RUN=$(find "$TMP_DAVINCI" -iname "DaVinci_Resolve_*.run" 2>/dev/null | head -n 1 || true)
     if [ -n "$DAVINCI_RUN" ]; then
         chmod +x "$DAVINCI_RUN"
+        echo "🚀 Executing DaVinci Resolve installer..."
         sudo "$DAVINCI_RUN" --noconcur -i -y || true
     fi
     rm -rf "$TMP_DAVINCI"
 fi
 
 # ------------------------------------------------------------------------------
-# 6. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
+# 6. VMWARE WORKSTATION INSTALLER & KERNEL MODULES BUILDER
+# ------------------------------------------------------------------------------
+if ! command -v vmware &> /dev/null; then
+    echo "📥 Installing VMware Workstation Workstation bundle..."
+    TMP_VM="/tmp/vmware_install"
+    rm -rf "$TMP_VM"
+    mkdir -p "$TMP_VM"
+    cd "$TMP_VM"
+    curl -fsSL https://gist.githubusercontent.com/jetfir3/e25e74a42e7c7ac2c808a537b12dc768/raw/download_workstation.sh -o download_workstation.sh || true
+    if [ -f download_workstation.sh ]; then
+        chmod +x download_workstation.sh
+        bash download_workstation.sh -v 17.6.4 || bash download_workstation.sh || true
+        VM_BUNDLE=$(find "$TMP_VM" /tmp ./ -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
+        if [ -n "$VM_BUNDLE" ]; then
+            sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
+        fi
+    fi
+    cd "$USER_HOME"
+    rm -rf "$TMP_VM"
+fi
+
+# Build VMware host kernel modules (vmmon & vmnet) from local tar.gz
+echo "⚙️ Building VMware host kernel modules (vmmon & vmnet)..."
+VMWARE_TAR=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "vmware-host-modules-*.tar.gz" 2>/dev/null | head -n 1 || true)
+
+TMP_MOD="/tmp/vmware_mod_build"
+rm -rf "$TMP_MOD"
+mkdir -p "$TMP_MOD"
+cd "$TMP_MOD"
+if [ -n "$VMWARE_TAR" ] && [ -f "$VMWARE_TAR" ]; then
+    echo "📦 Extracting local VMware modules archive: $VMWARE_TAR..."
+    tar -xzf "$VMWARE_TAR"
+else
+    echo "📥 Downloading fallback VMware modules archive..."
+    curl -fsSL "https://github.com/user-attachments/files/19986002/vmware-host-modules-workstation-17.6.0.tar.gz" -o vmware-modules.tar.gz || true
+    tar -xzf vmware-modules.tar.gz 2>/dev/null || true
+fi
+
+if [ -d vmware-host-modules* ]; then
+    cd vmware-host-modules* || true
+    make || true
+    sudo make install || true
+    sudo modprobe -a vmmon vmnet 2>/dev/null || true
+fi
+cd "$USER_HOME"
+rm -rf "$TMP_MOD"
+
+# ------------------------------------------------------------------------------
+# 7. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
 # ------------------------------------------------------------------------------
 echo "📦 Installing native RPM packages for Vesktop, Heroic Games Launcher & OnlyOffice..."
 TMP_RPM=$(mktemp -d)
@@ -226,7 +277,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 7. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, CZKAWKA, HELIUM, VIDEO-DOWNLOADER)
+# 8. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, CZKAWKA, HELIUM, VIDEO-DOWNLOADER)
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
@@ -245,32 +296,6 @@ flatpak override --user --filesystem=host --filesystem=host-etc --device=all --s
 
 # Set Helium as default browser
 sudo -u "$REAL_USER" HOME="$USER_HOME" xdg-settings set default-web-browser net.imput.Helium.desktop 2>/dev/null || true
-
-# ------------------------------------------------------------------------------
-# 8. VMWARE WORKSTATION KERNEL MODULES FROM LOCAL TAR.GZ ARCHIVE
-# ------------------------------------------------------------------------------
-echo "⚙️ Building VMware host kernel modules (vmmon & vmnet) from local tar.gz..."
-VMWARE_TAR=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "vmware-host-modules-*.tar.gz" 2>/dev/null | head -n 1 || true)
-
-TMP_MOD=$(mktemp -d)
-cd "$TMP_MOD"
-if [ -n "$VMWARE_TAR" ] && [ -f "$VMWARE_TAR" ]; then
-    echo "📦 Extracting local VMware modules archive: $VMWARE_TAR..."
-    tar -xzf "$VMWARE_TAR"
-else
-    echo "📥 Downloading fallback VMware modules archive..."
-    curl -fsSL "https://github.com/user-attachments/files/19986002/vmware-host-modules-workstation-17.6.0.tar.gz" -o vmware-modules.tar.gz || true
-    tar -xzf vmware-modules.tar.gz 2>/dev/null || true
-fi
-
-if [ -d vmware-host-modules* ]; then
-    cd vmware-host-modules* || true
-    make || true
-    sudo make install || true
-    sudo modprobe -a vmmon vmnet 2>/dev/null || true
-fi
-cd "$USER_HOME"
-rm -rf "$TMP_MOD"
 
 # Configure Kitty fastfetch auto-start in .bashrc
 if ! grep -q "fastfetch" "$USER_HOME/.bashrc" 2>/dev/null; then
@@ -317,11 +342,13 @@ EOF
 sudo sysctl --system 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 11. PURGE EXTRA BLOATWARE WHILE PRESERVING DISCOVER, SDDM & STREAMING
+# 11. PURGE EXACT REMAINING BLOATWARE PACKAGES
 # ------------------------------------------------------------------------------
-DEBLOAT_APPS=(
-    abrt abrt-desktop setroubleshoot setroubleshoot-gui
-    dragonplayer orca partitionmanager systemsettings
+EXACT_DEBLOAT_PACKAGES=(
+    gnome-abrt abrt-libs abrt-gui-libs abrt-desktop abrt
+    setroubleshoot-server setroubleshoot-plugins setroubleshoot
+    kde-partitionmanager partitionmanager
+    dragonplayer orca systemsettings
     alacritty mpv mpv-libs konsole dolphin gwenview okular neochat spectacle
     kolourpaint ark kwrite skanpage kamoso kcalc filelight kdebugsettings
     kde-connect kde-connect-libs kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager
@@ -332,13 +359,13 @@ DEBLOAT_APPS=(
     korganizer akregator gnome-tour gnome-boxes mediawriter
 )
 
-echo "🧹 Purging extra bloatware..."
-for pkg in "${DEBLOAT_APPS[@]}"; do
+echo "🧹 Purging exact remaining bloatware packages..."
+for pkg in "${EXACT_DEBLOAT_PACKAGES[@]}"; do
     sudo dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
 done
 
-# Re-verify SDDM, Discover, and desktop portals for streaming
-sudo dnf install -y --allowerasing sddm sddm-kcm plasma-discover firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
+# Re-verify SDDM and desktop portals
+sudo dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 12. PERMISSIONS & FINISH
