@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V24 PERFECT)
+# FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V25 PERFECT)
 # ==============================================================================
 set -e
 
@@ -27,9 +27,11 @@ fi
 echo "[$(date -Iseconds)] 🚀 Starting Fedora Master Setup for $REAL_USER ($USER_HOME)..."
 
 # ------------------------------------------------------------------------------
-# 1. PURGE RUNLEVEL "3" & CONFIGURE SDDM LOGIN SCREEN (NO AUTOLOGIN)
+# 1. PURGE PLASMA SESSIONS & CONFIGURE SDDM LOGIN SCREEN (NO PLASMA IN DROPDOWN)
 # ------------------------------------------------------------------------------
-echo "⚙️ Purging runlevel 3 override from GRUB and configuring SDDM login screen..."
+echo "⚙️ Purging Plasma session files from SDDM..."
+sudo rm -f /usr/share/wayland-sessions/plasma*.desktop /usr/share/xsessions/plasma*.desktop /usr/share/wayland-sessions/plasmax11*.desktop 2>/dev/null || true
+
 if grub2-editenv - list 2>/dev/null | grep -q "kernelopts.* 3"; then
     CURRENT_KOPTS="$(sudo grub2-editenv - list 2>/dev/null | grep kernelopts | cut -d= -f2- | sed 's/ 3//g' || true)"
     sudo grub2-editenv - set "kernelopts=$CURRENT_KOPTS" 2>/dev/null || true
@@ -43,7 +45,7 @@ Current=breeze
 EOF
 
 # ------------------------------------------------------------------------------
-# 2. UPDATE REPOSITORIES & INSTALL PACKAGES
+# 2. UPDATE REPOSITORIES & INSTALL PACKAGES (INCLUDING LIBXCRYPT-COMPAT)
 # ------------------------------------------------------------------------------
 echo "📦 Updating repositories and installing system dependencies..."
 sudo dnf update -y || true
@@ -60,7 +62,7 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     protontricks mangohud gamemode gamescope waydroid cups gutenprint hplip firewalld gcc gcc-c++ \
     clang clang-tools-extra gdb nasm make cmake ninja-build cargo rust rust-analyzer nodejs \
     python3 python3-pip pipx git wget curl jq file-roller zip unzip p7zip p7zip-plugins unrar \
-    apr apr-util zlib zlib-devel libpng12 swww swaybg kernel-headers kernel-devel 2>/dev/null || true
+    apr apr-util zlib zlib-devel libpng12 libxcrypt-compat libxcrypt swww swaybg kernel-headers kernel-devel 2>/dev/null || true
 
 # Tailscale
 curl -fsSL https://tailscale.com/install.sh | sh || true
@@ -102,6 +104,12 @@ if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! [ -d /opt/resolve ]; then
     rm -rf "$TMP_DAVINCI"
 fi
 
+# Fix DaVinci Resolve bundled library conflict with Fedora System APR/Glib
+if [ -d /opt/resolve/libs ]; then
+    sudo mv /opt/resolve/libs/libaprutil-1.so.0 /opt/resolve/libs/libaprutil-1.so.0.bak 2>/dev/null || true
+    sudo mv /opt/resolve/libs/libglib-2.0.so.0 /opt/resolve/libs/libglib-2.0.so.0.bak 2>/dev/null || true
+fi
+
 # Flatpaks
 sudo flatpak install -y flathub org.vinegarhq.Sober org.prismlauncher.PrismLauncher com.github.qarmin.czkawka com.viber.Viber net.imput.Helium com.github.unrud.VideoDownloader 2>/dev/null || true
 
@@ -118,7 +126,6 @@ cat << 'EOF' | sudo tee /usr/local/bin/davinci-resolve > /dev/null
 #!/usr/bin/env bash
 export QT_QPA_PLATFORM=xcb
 export SKIP_PACKAGE_CHECK=1
-export LD_PRELOAD=/usr/lib64/libglib-2.0.so
 exec /opt/resolve/bin/resolve "$@"
 EOF
 sudo chmod +x /usr/local/bin/davinci-resolve
@@ -141,8 +148,8 @@ Version=1.0
 Type=Application
 Name=Helium Browser
 GenericName=Web Browser
-Exec=flatpak run net.imput.Helium %U
-Icon=net.imput.Helium
+Exec=helium %U
+Icon=helium
 Terminal=false
 Categories=Network;WebBrowser;
 EOF
