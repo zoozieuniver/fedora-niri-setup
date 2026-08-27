@@ -95,7 +95,7 @@ fi
 # 4. INSTALL 100% OF SYSTEM PACKAGES FROM NIXOS CONFIG
 # ------------------------------------------------------------------------------
 echo "🖥️ Installing Niri Desktop environment and ALL NixOS applications..."
-sudo dnf install -y --skip-unavailable \
+sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     sddm \
     sddm-kcm \
     niri \

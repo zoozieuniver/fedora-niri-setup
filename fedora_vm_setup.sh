@@ -40,7 +40,7 @@ sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flat
 # 2. INSTALL SYSTEM PACKAGES
 # ------------------------------------------------------------------------------
 echo "🖥️ Installing Niri Desktop environment and all required system applications..."
-sudo dnf install -y --skip-unavailable --nogpgcheck \
+sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     sddm \
     sddm-kcm \
     niri \
