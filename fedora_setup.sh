@@ -136,8 +136,7 @@ sudo dnf install -y --skip-unavailable \
     cups \
     gutenprint \
     gutenprint-doc \
-    hplip \
-    firewalld
+    hplip
 
 # ------------------------------------------------------------------------------
 # 5. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)

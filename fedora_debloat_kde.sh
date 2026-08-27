@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  fedora_debloat_kde.sh — Безпечний скрипт очищення (Видалення Konsole & Dolphin)
+#  fedora_debloat_kde.sh — Повне очищення від блоатвару (Alacritty, MPV, KWallet, Firewall, KGames)
 # ==============================================================================
-#  Видаляє Konsole, Dolphin, ігри та блоатвар БЕЗ ВТРАТИ SDDM ТА ДИСКОРД-ТРАНСЛЯЦІЇ!
+#  Видаляє Alacritty, MPV, KWallet, K-ігри, K-утиліти та Firewall БЕЗ ВТРАТИ SDDM/DISCORD!
 # ==============================================================================
 
 set -euo pipefail
@@ -13,14 +13,34 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "========================================================================"
-echo " 🧹 Безпечне очищення системи (Видалення Konsole, Dolphin, ігор та блоатвару)"
+echo " 🧹 Повне очищення системи (Alacritty, MPV, KWallet, Firewall, K-ігри)"
 echo "========================================================================"
 
-# Пакети для безпечного видалення (без пошкодження SDDM та Pipewire/Discord Share)
+# Список НЕПОТРІБНИХ програм та утиліт для видалення
 DEBLOAT_PACKAGES=(
-    # Термінал та файловий менеджер KDE (використовуються Kitty та Thunar)
+    # Зайві термінали та програвачі (є Kitty та VLC)
+    alacritty
+    mpv mpv-libs mpv-devel
     konsole
     dolphin
+
+    # KWallet (нав'язливі спливаючі вікна паролів)
+    kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager
+
+    # Мережевий екран (Firewall)
+    firewall-config firewalld firewalld-filesystem python3-firewall
+
+    # Зайві KDE утиліти та утиліти доступності
+    kmouth
+    kcharselect
+    kamera
+    sweeper
+    kfind
+    kget
+    krdc
+    krfb krfb-libs
+    kjournald
+    krenamer
 
     # Ігри KDE
     kmahjongg kpat kmines ksudoku knavalbattle kbounce kblocks klines kreversi
@@ -38,7 +58,7 @@ DEBLOAT_PACKAGES=(
     mediawriter
 )
 
-echo "🚀 Видалення блоатвару з прапором --noautoremove (для захисту SDDM та PipeWire)..."
+echo "🚀 Видалення розширеного списку блоатвару (--noautoremove для захисту SDDM)..."
 dnf remove -y --noautoremove "${DEBLOAT_PACKAGES[@]}" || true
 
 echo "🛡️ Гарантований захист SDDM, Pipewire та порталів для трансляції екрану в Discord..."
@@ -48,5 +68,5 @@ systemctl set-default graphical.target
 systemctl enable --now sddm
 
 echo "========================================================================"
-echo " 🎉 Чищення завершено! SDDM, Thunar, Kitty та трансляція екрану у 100% безпеці."
+echo " 🎉 Очищення успішно завершено! Alacritty, MPV, KWallet, Firewall та K-блоатвар видалено."
 echo "========================================================================"
