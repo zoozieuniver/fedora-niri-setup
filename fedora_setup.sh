@@ -94,6 +94,9 @@ fi
 # ------------------------------------------------------------------------------
 # 4. INSTALL 100% OF SYSTEM PACKAGES FROM NIXOS CONFIG
 # ------------------------------------------------------------------------------
+echo "🧹 Resolving pre-installed Fedora 44 kmime package conflicts..."
+sudo dnf remove -y kmime 2>/dev/null || true
+
 echo "🖥️ Installing Niri Desktop environment and ALL NixOS applications..."
 sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     sddm \
