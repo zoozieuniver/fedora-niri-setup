@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# INSTALL ONLY MY PERSONAL APPLICATIONS (NO DE PACKAGES - NO REMOVALS)
+# INSTALL ONLY MY PERSONAL APPLICATIONS (NO THEMES, NO ICONS - ONLY APPS & FASTFETCH)
 # ==============================================================================
 set -e
 
@@ -22,7 +22,7 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-echo "[$(date -Iseconds)] 🚀 Starting Installation of Personal Apps for $REAL_USER ($USER_HOME)..."
+echo "[$(date -Iseconds)] 🚀 Starting Pure Apps Installation for $REAL_USER ($USER_HOME)..."
 
 # ------------------------------------------------------------------------------
 # 1. ENABLE RPM FUSION, COPR & FLATHUB
@@ -35,15 +35,14 @@ sudo dnf copr enable -y imput/helium 2>/dev/null || true
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
 
 # ------------------------------------------------------------------------------
-# 2. INSTALL ONLY YOUR CHOSEN APPLICATIONS
+# 2. INSTALL CHOSEN APPLICATIONS (NO THEMES / NO ICONS / WITH FASTFETCH)
 # ------------------------------------------------------------------------------
-echo "🛠️ Installing user applications & dev packages..."
+echo "🛠️ Installing applications & dependencies..."
 sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
-    helium-bin papirus-icon-theme easyeffects pavucontrol pulseaudio-utils btop fastfetch qbittorrent yt-dlp \
-    vlc gimp krita obs-studio handbrake baobab rpi-imager chromium telegram-desktop steam \
-    protontricks mangohud gamemode gamescope waydroid cups gcc gcc-c++ clang make cmake ninja-build \
-    cargo rust rust-analyzer nodejs python3 python3-pip git wget curl jq file-roller zip unzip p7zip \
-    apr apr-util zlib zlib-devel libpng12 libxcrypt-compat libxcrypt swww swaybg kernel-headers kernel-devel 2>/dev/null || true
+    helium-bin fastfetch btop qbittorrent yt-dlp vlc gimp krita obs-studio handbrake baobab rpi-imager \
+    chromium telegram-desktop steam protontricks mangohud gamemode gamescope waydroid cups \
+    gcc gcc-c++ clang make cmake ninja-build cargo rust rust-analyzer nodejs python3 python3-pip \
+    git wget curl jq file-roller zip unzip p7zip apr apr-util zlib zlib-devel libpng12 libxcrypt-compat libxcrypt kernel-headers kernel-devel 2>/dev/null || true
 
 # Tailscale
 echo "🌐 Installing Tailscale..."
@@ -160,9 +159,9 @@ Terminal=false
 Categories=Game;Utility;
 EOF
 
-sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$MEMLOG" 2>/dev/null || true
+sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$MEMLOG" 2>/dev/null || true
 
-echo "[$(date -Iseconds)] 🎉 Personal Applications Installation completed successfully!" >> "$MEMLOG"
+echo "[$(date -Iseconds)] 🎉 Pure Applications Installation completed successfully!" >> "$MEMLOG"
 echo "========================================================================"
-echo " 🎉 Personal Apps Installation Completed! Logged to: $MEMLOG"
+echo " 🎉 Pure Apps Installation Completed! Logged to: $MEMLOG"
 echo "========================================================================"
