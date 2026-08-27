@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (V25 - 100% PERFECT & MEMORY LOGGED)
+# FEDORA VM MASTER SETUP SCRIPT (V27 PERFECT - ALT+ KEYBINDINGS & FULL SUITE)
 # ==============================================================================
 set -e
 
@@ -27,7 +27,7 @@ fi
 echo "[$(date -Iseconds)] 🚀 Starting Fedora VM Master Setup for $REAL_USER ($USER_HOME)..."
 
 # ------------------------------------------------------------------------------
-# 1. PURGE PLASMA SESSIONS & CONFIGURE SDDM LOGIN SCREEN (NO PLASMA IN DROPDOWN)
+# 1. PURGE PLASMA SESSIONS & CONFIGURE SDDM LOGIN SCREEN (NO AUTOLOGIN)
 # ------------------------------------------------------------------------------
 echo "⚙️ Purging Plasma session files from SDDM..."
 sudo rm -f /usr/share/wayland-sessions/plasma*.desktop /usr/share/xsessions/plasma*.desktop /usr/share/wayland-sessions/plasmax11*.desktop 2>/dev/null || true
@@ -45,7 +45,7 @@ Current=breeze
 EOF
 
 # ------------------------------------------------------------------------------
-# 2. UPDATE REPOSITORIES & INSTALL PACKAGES (INCLUDING LIBXCRYPT-COMPAT)
+# 2. UPDATE REPOSITORIES & INSTALL PACKAGES
 # ------------------------------------------------------------------------------
 echo "📦 Updating repositories and installing system dependencies..."
 sudo dnf update -y || true
@@ -179,7 +179,7 @@ Categories=Game;Utility;
 EOF
 
 # ------------------------------------------------------------------------------
-# 5. UNPACK DOTFILES & APPLY THEME / CURSORS / WALLPAPER AUTOSTART
+# 5. UNPACK DOTFILES & APPLY ALT+ KEYBINDINGS / THEME / CURSORS / WALLPAPER
 # ------------------------------------------------------------------------------
 ARCHIVE_PATH=$(find "$SCRIPT_DIR" "$USER_HOME/fedora-niri-setup" "$USER_HOME/Downloads" "$USER_HOME/Завантаження" ./ /tmp -iname "all-customizations-and-dotfiles.tar.gz" 2>/dev/null | head -n 1 || true)
 if [ -n "$ARCHIVE_PATH" ] && [ -f "$ARCHIVE_PATH" ]; then
@@ -189,9 +189,66 @@ if [ -n "$ARCHIVE_PATH" ] && [ -f "$ARCHIVE_PATH" ]; then
     find "$USER_HOME/.config/niri" "$USER_HOME/.local/bin" "$USER_HOME/.config/wofi" -type f -exec sed -i "s|/home/zoozie_fedora|$USER_HOME|g" {} + 2>/dev/null || true
 fi
 
+# Enforce clean Alt+ keybindings for VMware compatibility
+cat << 'EOF' > "$USER_HOME/.config/niri/keybindings.kdl"
+// Niri keybindings for VM (Alt+ modifiers for VMware compatibility)
+
+binds {
+    Alt+Shift+Slash { show-hotkey-overlay; }
+
+    Alt+T hotkey-overlay-title="Open Terminal: kitty" { spawn "kitty"; }
+    Alt+Return hotkey-overlay-title="Open Terminal: kitty" { spawn "kitty"; }
+    Alt+R hotkey-overlay-title="Run Application: wofi" { spawn "wofi" "--show" "drun"; }
+    Alt+D hotkey-overlay-title="Run Application: wofi" { spawn "wofi" "--show" "drun"; }
+    Alt+E hotkey-overlay-title="Open File Manager: Thunar" { spawn "thunar"; }
+
+    Alt+O repeat=false { toggle-overview; }
+    Alt+Q repeat=false { close-window; }
+    Alt+Shift+Q { quit; }
+
+    Alt+Left  { focus-column-left; }
+    Alt+Down  { focus-window-down; }
+    Alt+Up    { focus-window-up; }
+    Alt+Right { focus-column-right; }
+    Alt+H     { focus-column-left; }
+    Alt+J     { focus-window-down; }
+    Alt+K     { focus-window-up; }
+    Alt+L     { focus-column-right; }
+
+    Alt+Ctrl+Left  { move-column-left; }
+    Alt+Ctrl+Down  { move-window-down; }
+    Alt+Ctrl+Up    { move-window-up; }
+    Alt+Ctrl+Right { move-column-right; }
+
+    Alt+1 { focus-workspace 1; }
+    Alt+2 { focus-workspace 2; }
+    Alt+3 { focus-workspace 3; }
+    Alt+4 { focus-workspace 4; }
+    Alt+5 { focus-workspace 5; }
+    Alt+6 { focus-workspace 6; }
+    Alt+7 { focus-workspace 7; }
+    Alt+8 { focus-workspace 8; }
+
+    Alt+Ctrl+1 { move-column-to-workspace 1; }
+    Alt+Ctrl+2 { move-column-to-workspace 2; }
+    Alt+Ctrl+3 { move-column-to-workspace 3; }
+    Alt+Ctrl+4 { move-column-to-workspace 4; }
+    Alt+Ctrl+5 { move-column-to-workspace 5; }
+    Alt+Ctrl+6 { move-column-to-workspace 6; }
+    Alt+Ctrl+7 { move-column-to-workspace 7; }
+    Alt+Ctrl+8 { move-column-to-workspace 8; }
+}
+EOF
+
+# Hide Wayland recording portal popup window
+if [ -f "$USER_HOME/.config/niri/window-rules.kdl" ] && ! grep -q "Місток запису" "$USER_HOME/.config/niri/window-rules.kdl"; then
+    sed -i '/geometry-corner-radius/i \// Hide Wayland recording bridge portal popup window\nwindow-rule {\n    match title=r#"(?i).*Місток запису.*"#\n    match title=r#"(?i).*Wayland.*recorder.*"#\n    match app-id=r#"(?i).*portal.*"#\n    open-floating true\n    default-floating-position x=-3000 y=-3000\n    opacity 0.0\n}\n' "$USER_HOME/.config/niri/window-rules.kdl" || true
+fi
+
 # Fix Wofi style.css relative soul.png pathing
 if [ -f "$USER_HOME/.config/wofi/style.css" ]; then
-    sed -i 's|file:///home/[^/]*/.config/wofi/soul.png|soul.png|g' "$USER_HOME/.config/wofi/style.css" || true
+    sed -i "s|file:///home/[^/]*/.config/wofi/soul.png|$USER_HOME/.config/wofi/soul.png|g" "$USER_HOME/.config/wofi/style.css" || true
+    sed -i "s|url(\"soul.png\")|url(\"$USER_HOME/.config/wofi/soul.png\")|g" "$USER_HOME/.config/wofi/style.css" || true
 fi
 
 # GTK Settings
