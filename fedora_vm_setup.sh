@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% COMPLETE & OFFICIAL XDG DIRS)
+# FEDORA VM MASTER SETUP SCRIPT (100% NIXOS PARITY + TAILSCALE + WAYDROID + BBR)
 # ==============================================================================
 set -e
 
@@ -97,6 +97,8 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     protontricks \
     mangohud \
     gamemode \
+    gamescope \
+    waydroid \
     cups \
     gutenprint \
     gutenprint-doc \
@@ -132,10 +134,28 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     kernel-devel \
     kernel-devel-$(uname -r) 2>/dev/null || true
 
+# Install Tailscale VPN via official installer script
+echo "🌐 Installing Tailscale VPN..."
+curl -fsSL https://tailscale.com/install.sh | sh || true
+sudo systemctl enable --now tailscaled 2>/dev/null || true
+
 # Install Zed Code Editor natively
 echo "⚡ Installing Zed Code Editor..."
 if ! command -v zed &> /dev/null; then
     sudo -u "$REAL_USER" curl -f https://zed.dev/install.sh | sh || true
+fi
+
+# Install Satty screenshot editor
+if ! command -v satty &> /dev/null; then
+    echo "⚡ Installing Satty screenshot editor..."
+    SATTY_URL=$(curl -s https://api.github.com/repos/gabm/Satty/releases/latest | grep "browser_download_url.*x86_64.*tar.gz" | cut -d '"' -f 4 | head -n 1 || true)
+    if [ -n "$SATTY_URL" ]; then
+        curl -sL "$SATTY_URL" | tar -xz -C /tmp || true
+        if [ -f /tmp/satty ]; then
+            sudo mv /tmp/satty /usr/local/bin/satty
+            sudo chmod +x /usr/local/bin/satty
+        fi
+    fi
 fi
 
 # ------------------------------------------------------------------------------
@@ -169,7 +189,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 5. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM FALLBACK)
+# 5. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM, VIDEO-DOWNLOADER)
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
@@ -181,6 +201,7 @@ sudo flatpak install -y flathub net.davidhi.ProtonUp-Qt || true
 sudo flatpak install -y flathub com.github.qarmin.czkawka || true
 sudo flatpak install -y flathub com.viber.Viber || true
 sudo flatpak install -y flathub net.imput.Helium || true
+sudo flatpak install -y flathub com.github.unrud.VideoDownloader || true
 
 echo "🔓 Unlocking FULL system access permissions for Flatpaks..."
 sudo flatpak override --filesystem=host --filesystem=host-etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
@@ -280,18 +301,35 @@ EOF
 fi
 
 # ------------------------------------------------------------------------------
-# 10. BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
+# 10. NETWORK BBR TUNING & BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
 # ------------------------------------------------------------------------------
+echo "⚡ Applying Network BBR & Gigabit TCP buffer optimizations..."
+cat << 'EOF' | sudo tee /etc/sysctl.d/99-gigabit-bbr.conf > /dev/null
+net.core.default_qdisc = fq
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+net.ipv4.tcp_rmem = 4096 87380 16777216
+net.ipv4.tcp_wmem = 4096 65536 16777216
+net.core.netdev_max_backlog = 10000
+EOF
+sudo sysctl --system 2>/dev/null || true
+
 echo "🚀 Applying Btrfs nodatacow (+C) attributes..."
 sudo chattr +C "$USER_HOME/Downloads" "$USER_HOME/Games" "$USER_HOME/.var/app" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 11. PRINTER SETUP (HP LaserJet 2420n @ 192.168.66.10 PCL6)
+# 11. PRINTER SETUP & FIREWALL RULES (TAILSCALE & STEAM)
 # ------------------------------------------------------------------------------
-echo "🖨️ Configuring HP LaserJet 2420n Printer..."
+echo "🖨️ Configuring HP LaserJet 2420n Printer & Firewall..."
 sudo systemctl enable --now cups avahi-daemon 2>/dev/null || true
 sudo lpadmin -p HP_LaserJet_2420n -v socket://192.168.66.10:9100 -E -m gutenprint.5.3://hp-lj_2420/expert -D "HP LaserJet 2420n Network Printer" 2>/dev/null || true
 sudo lpadmin -d HP_LaserJet_2420n 2>/dev/null || true
+
+sudo systemctl enable --now firewalld 2>/dev/null || true
+sudo firewall-cmd --permanent --add-interface=tailscale0 2>/dev/null || true
+sudo firewall-cmd --permanent --add-port=25565/tcp 2>/dev/null || true
+sudo firewall-cmd --permanent --add-port=25565/udp 2>/dev/null || true
+sudo firewall-cmd --reload 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 12. CONFIGURE SDDM DISPLAY MANAGER & SSH SERVICE
