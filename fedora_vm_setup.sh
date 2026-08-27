@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% BULLETPROOF & SAFE REDIRECTIONS)
+# FEDORA VM MASTER SETUP SCRIPT (100% COMPLETE & OFFICIAL XDG DIRS)
 # ==============================================================================
 set -e
 
@@ -43,7 +43,15 @@ sudo dnf config-manager enable fedora-cisco-openh264 2>/dev/null || true
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
 
 # ------------------------------------------------------------------------------
-# 2. RESOLVE RPM CONFLICTS & INSTALL SYSTEM PACKAGES
+# 2. CREATE OFFICIAL XDG SYSTEM DIRECTORIES (DOWNLOADS, DOCUMENTS, PICTURES)
+# ------------------------------------------------------------------------------
+echo "📁 Creating official XDG user directories..."
+sudo dnf install -y xdg-user-dirs || true
+sudo -u "$REAL_USER" xdg-user-dirs-update --force 2>/dev/null || true
+mkdir -p "$USER_HOME/Projects" "$USER_HOME/Games" "$USER_HOME/Downloads" "$USER_HOME/Documents" "$USER_HOME/Pictures" "$USER_HOME/Music" "$USER_HOME/Videos" 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# 3. RESOLVE RPM CONFLICTS & INSTALL SYSTEM PACKAGES
 # ------------------------------------------------------------------------------
 echo "🧹 Resolving pre-installed Fedora 44 kmime package conflicts..."
 sudo dnf remove -y kmime kmime-libs 2>/dev/null || true
@@ -127,11 +135,11 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
 # Install Zed Code Editor natively
 echo "⚡ Installing Zed Code Editor..."
 if ! command -v zed &> /dev/null; then
-    sudo -u "$REAL_USER" curl -fssSL https://zed.dev/install.sh | sh || true
+    sudo -u "$REAL_USER" curl -f https://zed.dev/install.sh | sh || true
 fi
 
 # ------------------------------------------------------------------------------
-# 3. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
+# 4. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
 # ------------------------------------------------------------------------------
 echo "📦 Installing native RPM packages for Vesktop, Heroic Games Launcher & OnlyOffice..."
 TMP_RPM=$(mktemp -d)
@@ -161,7 +169,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 4. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM FALLBACK)
+# 5. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM FALLBACK)
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
@@ -182,9 +190,9 @@ flatpak override --user --filesystem=host --filesystem=host-etc --device=all --s
 sudo -u "$REAL_USER" xdg-settings set default-web-browser net.imput.Helium.desktop 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 5. VMWARE WORKSTATION INSTALLER & MODULE BUILDER
+# 6. VMWARE WORKSTATION BUNDLE & KERNEL MODULES (FROM TAR.GZ)
 # ------------------------------------------------------------------------------
-echo "💻 Setting up VMware Workstation..."
+echo "💻 Setting up VMware Workstation & Kernel Modules..."
 VM_BUNDLE=$(find "$USER_HOME" /tmp "$SCRIPT_DIR" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
 
 if [ -z "$VM_BUNDLE" ] && ! command -v vmware &> /dev/null; then
@@ -204,33 +212,23 @@ if [ -n "$VM_BUNDLE" ] && [ -f "$VM_BUNDLE" ] && ! command -v vmware &> /dev/nul
     sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
 fi
 
-# Build VMware host modules
-mkdir -p "$USER_HOME/.local/bin" 2>/dev/null || true
-cat << 'EOF' > "$USER_HOME/.local/bin/build-vmware-modules.sh"
-#!/usr/bin/env bash
-set -e
-echo "Building VMware kernel modules..."
-CDIR=$(mktemp -d)
-cd "$CDIR"
-git clone https://github.com/mkubecek/vmware-host-modules.git
-cd vmware-host-modules
-WV=$(vmware --version 2>/dev/null | awk '{print $3}' || true)
-git checkout "workstation-$WV" 2>/dev/null || git checkout "workstation-${WV%.*}" 2>/dev/null || git checkout master || true
-make clean 2>/dev/null || true
-make || true
-sudo make install || true
-sudo systemctl enable --now vmware-USBArbitrator.service 2>/dev/null || true
-sudo vmware-networks --start || true
-echo "✅ VMware modules built successfully!"
-EOF
-chmod +x "$USER_HOME/.local/bin/build-vmware-modules.sh" || true
-
-if command -v vmware &> /dev/null; then
-    bash "$USER_HOME/.local/bin/build-vmware-modules.sh" || true
+# Build VMware kernel modules using workstation-17.6.0.tar.gz archive
+echo "⚙️ Building VMware host kernel modules (vmmon & vmnet)..."
+TMP_MOD=$(mktemp -d)
+cd "$TMP_MOD"
+curl -fsSL "https://github.com/user-attachments/files/19986002/vmware-host-modules-workstation-17.6.0.tar.gz" -o vmware-modules.tar.gz || true
+if [ -f vmware-modules.tar.gz ]; then
+    tar -xzf vmware-modules.tar.gz
+    cd vmware-host-modules* || true
+    make || true
+    sudo make install || true
+    sudo modprobe -a vmmon vmnet 2>/dev/null || true
 fi
+cd "$USER_HOME"
+rm -rf "$TMP_MOD"
 
 # ------------------------------------------------------------------------------
-# 6. UNPACK DOTFILES, THUNAR, KITTY, WAYBAR, WOFI CONFIGS & FONTS
+# 7. UNPACK DOTFILES, THUNAR, KITTY, WAYBAR, WOFI CONFIGS & FONTS
 # ------------------------------------------------------------------------------
 ARCHIVE_PATH="$USER_HOME/Downloads/all-customizations-and-dotfiles.tar.gz"
 [ -f "$ARCHIVE_PATH" ] || ARCHIVE_PATH="./all-customizations-and-dotfiles.tar.gz"
@@ -247,7 +245,7 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 7. CONVERT NIRI KEYBINDINGS TO Alt+ FOR VM COMPATIBILITY
+# 8. CONVERT NIRI KEYBINDINGS TO Alt+ FOR VM COMPATIBILITY
 # ------------------------------------------------------------------------------
 KBD_CONF="$USER_HOME/.config/niri/keybindings.kdl"
 if [ -f "$KBD_CONF" ]; then
@@ -257,7 +255,7 @@ if [ -f "$KBD_CONF" ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 8. REGISTER FONTS & CURSORS (SAFE FILE WRITING)
+# 9. REGISTER FONTS & KITTY BASH FASTFETCH INTEGRATION
 # ------------------------------------------------------------------------------
 echo "🔤 Registering Monocraft fonts and Deltarune cursors..."
 fc-cache -fv 2>/dev/null || true
@@ -270,15 +268,25 @@ Inherits=Deltarune-Dark-Cursors
 EOF
 cp /tmp/index.theme "$USER_HOME/.icons/default/index.theme" 2>/dev/null || true
 
+# Configure Kitty fastfetch auto-start in .bashrc
+if ! grep -q "fastfetch" "$USER_HOME/.bashrc" 2>/dev/null; then
+    cat << 'EOF' >> "$USER_HOME/.bashrc"
+
+# Auto-start fastfetch inside interactive terminals (like Kitty)
+if [[ $- == *i* ]] && [ "$TERM_PROGRAM" != "zed" ]; then
+    fastfetch
+fi
+EOF
+fi
+
 # ------------------------------------------------------------------------------
-# 9. BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
+# 10. BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
 # ------------------------------------------------------------------------------
-echo "🚀 Creating Games directory and applying Btrfs nodatacow (+C) attributes..."
-mkdir -p "$USER_HOME/Downloads" "$USER_HOME/Games" "$USER_HOME/.var/app" 2>/dev/null || true
+echo "🚀 Applying Btrfs nodatacow (+C) attributes..."
 sudo chattr +C "$USER_HOME/Downloads" "$USER_HOME/Games" "$USER_HOME/.var/app" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 10. PRINTER SETUP (HP LaserJet 2420n @ 192.168.66.10 PCL6)
+# 11. PRINTER SETUP (HP LaserJet 2420n @ 192.168.66.10 PCL6)
 # ------------------------------------------------------------------------------
 echo "🖨️ Configuring HP LaserJet 2420n Printer..."
 sudo systemctl enable --now cups avahi-daemon 2>/dev/null || true
@@ -286,7 +294,7 @@ sudo lpadmin -p HP_LaserJet_2420n -v socket://192.168.66.10:9100 -E -m gutenprin
 sudo lpadmin -d HP_LaserJet_2420n 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 11. CONFIGURE SDDM DISPLAY MANAGER & SSH SERVICE
+# 12. CONFIGURE SDDM DISPLAY MANAGER & SSH SERVICE
 # ------------------------------------------------------------------------------
 echo "🖥️ Configuring SDDM Display Manager & SSH service for Niri..."
 sudo systemctl enable --now sshd 2>/dev/null || true
@@ -304,7 +312,7 @@ Session=niri.desktop
 EOF
 
 # ------------------------------------------------------------------------------
-# 12. RUN SAFE KDE DEBLOAT
+# 13. RUN SAFE KDE DEBLOAT
 # ------------------------------------------------------------------------------
 DEBLOAT_PACKAGES=(
     alacritty
@@ -328,9 +336,9 @@ echo "🧹 Executing safe KDE debloat..."
 sudo dnf remove -y --noautoremove "${DEBLOAT_PACKAGES[@]}" || true
 
 # ------------------------------------------------------------------------------
-# 13. PERMISSIONS & FINISH
+# 14. PERMISSIONS & FINISH
 # ------------------------------------------------------------------------------
-sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/fedora_vm_setup.log" 2>/dev/null || true
+sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/Projects" "$USER_HOME/Games" "$USER_HOME/fedora_vm_setup.log" 2>/dev/null || true
 
 echo "========================================================================"
 echo " 🎉 Fedora Niri VM Master Setup Completed Successfully!"

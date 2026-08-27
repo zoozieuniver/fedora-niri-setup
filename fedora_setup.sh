@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V14 PERFECT)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V15 PERFECT)
 # ==============================================================================
 set -e
 
@@ -38,7 +38,15 @@ sudo dnf config-manager enable fedora-cisco-openh264 2>/dev/null || true
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
 
 # ------------------------------------------------------------------------------
-# 2. RESOLVE RPM CONFLICTS & INSTALL SYSTEM PACKAGES
+# 2. CREATE OFFICIAL XDG SYSTEM DIRECTORIES (DOWNLOADS, DOCUMENTS, PICTURES)
+# ------------------------------------------------------------------------------
+echo "📁 Creating official XDG user directories..."
+sudo dnf install -y xdg-user-dirs || true
+sudo -u "$REAL_USER" xdg-user-dirs-update --force 2>/dev/null || true
+mkdir -p "$USER_HOME/Projects" "$USER_HOME/Games" "$USER_HOME/Downloads" "$USER_HOME/Documents" "$USER_HOME/Pictures" "$USER_HOME/Music" "$USER_HOME/Videos" 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# 3. RESOLVE RPM CONFLICTS & INSTALL SYSTEM PACKAGES
 # ------------------------------------------------------------------------------
 echo "🧹 Resolving pre-installed Fedora 44 kmime package conflicts..."
 sudo dnf remove -y kmime kmime-libs 2>/dev/null || true
@@ -122,11 +130,11 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
 # Install Zed Code Editor natively
 echo "⚡ Installing Zed Code Editor..."
 if ! command -v zed &> /dev/null; then
-    sudo -u "$REAL_USER" curl -fssSL https://zed.dev/install.sh | sh || true
+    sudo -u "$REAL_USER" curl -f https://zed.dev/install.sh | sh || true
 fi
 
 # ------------------------------------------------------------------------------
-# 3. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
+# 4. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
 # ------------------------------------------------------------------------------
 echo "📦 Installing native RPM packages for Vesktop, Heroic Games Launcher & OnlyOffice..."
 TMP_RPM=$(mktemp -d)
@@ -156,7 +164,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 4. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM FALLBACK)
+# 5. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM FALLBACK)
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
@@ -177,7 +185,7 @@ flatpak override --user --filesystem=host --filesystem=host-etc --device=all --s
 sudo -u "$REAL_USER" xdg-settings set default-web-browser net.imput.Helium.desktop 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 5. VMWARE WORKSTATION INSTALLER & MODULE BUILDER
+# 6. VMWARE WORKSTATION INSTALLER & MODULE BUILDER (FROM TAR.GZ)
 # ------------------------------------------------------------------------------
 echo "💻 Setting up VMware Workstation..."
 VM_BUNDLE=$(find "$USER_HOME" /tmp "$SCRIPT_DIR" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
@@ -200,32 +208,33 @@ if [ -n "$VM_BUNDLE" ] && [ -f "$VM_BUNDLE" ] && ! command -v vmware &> /dev/nul
 fi
 
 # Build VMware host modules
-mkdir -p "$USER_HOME/.local/bin" 2>/dev/null || true
-cat << 'EOF' > "$USER_HOME/.local/bin/build-vmware-modules.sh"
-#!/usr/bin/env bash
-set -e
-echo "Building VMware kernel modules..."
-CDIR=$(mktemp -d)
-cd "$CDIR"
-git clone https://github.com/mkubecek/vmware-host-modules.git
-cd vmware-host-modules
-WV=$(vmware --version 2>/dev/null | awk '{print $3}' || true)
-git checkout "workstation-$WV" 2>/dev/null || git checkout "workstation-${WV%.*}" 2>/dev/null || git checkout master || true
-make clean 2>/dev/null || true
-make || true
-sudo make install || true
-sudo systemctl enable --now vmware-USBArbitrator.service 2>/dev/null || true
-sudo vmware-networks --start || true
-echo "✅ VMware modules built successfully!"
-EOF
-chmod +x "$USER_HOME/.local/bin/build-vmware-modules.sh" || true
+echo "⚙️ Building VMware host kernel modules (vmmon & vmnet)..."
+TMP_MOD=$(mktemp -d)
+cd "$TMP_MOD"
+curl -fsSL "https://github.com/user-attachments/files/19986002/vmware-host-modules-workstation-17.6.0.tar.gz" -o vmware-modules.tar.gz || true
+if [ -f vmware-modules.tar.gz ]; then
+    tar -xzf vmware-modules.tar.gz
+    cd vmware-host-modules* || true
+    make || true
+    sudo make install || true
+    sudo modprobe -a vmmon vmnet 2>/dev/null || true
+fi
+cd "$USER_HOME"
+rm -rf "$TMP_MOD"
 
-if command -v vmware &> /dev/null; then
-    bash "$USER_HOME/.local/bin/build-vmware-modules.sh" || true
+# Configure Kitty fastfetch auto-start in .bashrc
+if ! grep -q "fastfetch" "$USER_HOME/.bashrc" 2>/dev/null; then
+    cat << 'EOF' >> "$USER_HOME/.bashrc"
+
+# Auto-start fastfetch inside interactive terminals (like Kitty)
+if [[ $- == *i* ]] && [ "$TERM_PROGRAM" != "zed" ]; then
+    fastfetch
+fi
+EOF
 fi
 
 # ------------------------------------------------------------------------------
-# 6. SDDM & ACCOUNTS SERVICE DEFAULT SESSION SETUP
+# 7. SDDM & ACCOUNTS SERVICE DEFAULT SESSION SETUP
 # ------------------------------------------------------------------------------
 echo "🖥️ Configuring SDDM Display Manager & SSH service..."
 sudo systemctl enable --now sshd 2>/dev/null || true
@@ -243,7 +252,7 @@ Session=niri.desktop
 EOF
 
 # ------------------------------------------------------------------------------
-# 7. RUN SAFE KDE DEBLOAT
+# 8. RUN SAFE KDE DEBLOAT
 # ------------------------------------------------------------------------------
 DEBLOAT_PACKAGES=(
     alacritty
@@ -267,9 +276,9 @@ echo "🧹 Executing safe KDE debloat..."
 sudo dnf remove -y --noautoremove "${DEBLOAT_PACKAGES[@]}" || true
 
 # ------------------------------------------------------------------------------
-# 8. PERMISSIONS & FINISH
+# 9. PERMISSIONS & FINISH
 # ------------------------------------------------------------------------------
-sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/fedora_setup.log" 2>/dev/null || true
+sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/Projects" "$USER_HOME/Games" "$USER_HOME/fedora_setup.log" 2>/dev/null || true
 
 echo "========================================================================"
 echo " 🎉 Fedora Master Setup Completed Successfully!"
