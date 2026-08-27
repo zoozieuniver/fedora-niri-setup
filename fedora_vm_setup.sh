@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% NIXOS PARITY + TAILSCALE + WAYDROID + BBR)
+# FEDORA VM MASTER SETUP SCRIPT (100% CLEAN DEBLOAT & NATIVE ZED/VMWARE)
 # ==============================================================================
 set -e
 
@@ -47,7 +47,7 @@ sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flat
 # ------------------------------------------------------------------------------
 echo "📁 Creating official XDG user directories..."
 sudo dnf install -y xdg-user-dirs || true
-sudo -u "$REAL_USER" xdg-user-dirs-update --force 2>/dev/null || true
+sudo -u "$REAL_USER" HOME="$USER_HOME" xdg-user-dirs-update --force 2>/dev/null || true
 mkdir -p "$USER_HOME/Projects" "$USER_HOME/Games" "$USER_HOME/Downloads" "$USER_HOME/Documents" "$USER_HOME/Pictures" "$USER_HOME/Music" "$USER_HOME/Videos" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
@@ -139,10 +139,14 @@ echo "🌐 Installing Tailscale VPN..."
 curl -fsSL https://tailscale.com/install.sh | sh || true
 sudo systemctl enable --now tailscaled 2>/dev/null || true
 
-# Install Zed Code Editor natively
+# Install Zed Code Editor natively for REAL_USER and globally
 echo "⚡ Installing Zed Code Editor..."
 if ! command -v zed &> /dev/null; then
-    sudo -u "$REAL_USER" curl -f https://zed.dev/install.sh | sh || true
+    sudo -u "$REAL_USER" HOME="$USER_HOME" bash -c 'curl -fssSL https://zed.dev/install.sh | sh' || true
+    if [ -f "$USER_HOME/.local/bin/zed" ]; then
+        sudo cp "$USER_HOME/.local/bin/zed" /usr/local/bin/zed
+        sudo chmod +x /usr/local/bin/zed
+    fi
 fi
 
 # Install Satty screenshot editor
@@ -208,29 +212,26 @@ sudo flatpak override --filesystem=host --filesystem=host-etc --device=all --sha
 flatpak override --user --filesystem=host --filesystem=host-etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
 
 # Set Helium as default browser
-sudo -u "$REAL_USER" xdg-settings set default-web-browser net.imput.Helium.desktop 2>/dev/null || true
+sudo -u "$REAL_USER" HOME="$USER_HOME" xdg-settings set default-web-browser net.imput.Helium.desktop 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 6. VMWARE WORKSTATION BUNDLE & KERNEL MODULES (FROM TAR.GZ)
+# 6. VMWARE WORKSTATION INSTALLER & KERNEL MODULES TAR.GZ
 # ------------------------------------------------------------------------------
-echo "💻 Setting up VMware Workstation & Kernel Modules..."
-VM_BUNDLE=$(find "$USER_HOME" /tmp "$SCRIPT_DIR" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
-
-if [ -z "$VM_BUNDLE" ] && ! command -v vmware &> /dev/null; then
-    echo "📥 Downloading VMware Workstation..."
+if ! command -v vmware &> /dev/null; then
+    echo "📥 Downloading and installing VMware Workstation..."
     TMP_VM=$(mktemp -d)
     cd "$TMP_VM"
     curl -fsSL https://gist.githubusercontent.com/jetfir3/e25e74a42e7c7ac2c808a537b12dc768/raw/download_workstation.sh -o download_workstation.sh || true
     if [ -f download_workstation.sh ]; then
         chmod +x download_workstation.sh
         bash download_workstation.sh -v 17.6.4 || bash download_workstation.sh || true
-        VM_BUNDLE=$(find "$TMP_VM" "$USER_HOME" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
+        VM_BUNDLE=$(find "$TMP_VM" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
+        if [ -n "$VM_BUNDLE" ]; then
+            sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
+        fi
     fi
-fi
-
-if [ -n "$VM_BUNDLE" ] && [ -f "$VM_BUNDLE" ] && ! command -v vmware &> /dev/null; then
-    echo "⚙️ Executing VMware installer bundle: $VM_BUNDLE..."
-    sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
+    cd "$USER_HOME"
+    rm -rf "$TMP_VM"
 fi
 
 # Build VMware kernel modules using workstation-17.6.0.tar.gz archive
@@ -350,28 +351,29 @@ Session=niri.desktop
 EOF
 
 # ------------------------------------------------------------------------------
-# 13. RUN SAFE KDE DEBLOAT
+# 13. SAFE STANDALONE APPLICATION DEBLOAT (NON-BREAKING)
 # ------------------------------------------------------------------------------
-DEBLOAT_PACKAGES=(
+DEBLOAT_APPS=(
     alacritty
-    mpv mpv-libs mpv-devel
+    mpv mpv-libs
     konsole
     dolphin
-    kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager kf5-kwallet kf6-kwallet
     kmouth
     kcharselect
     kamera
-    sweeper kfind kget krdc krfb krfb-libs kjournald krenamer
+    sweeper kfind kget krdc krfb kjournald krenamer
     kmahjongg kpat kmines ksudoku knavalbattle kbounce kblocks klines kreversi
     kbattleship kblackbox bovo granatier kapman katomic kdiamond kigo killbots
     kiriki kjumpingcube knetwalk knights kolf kollision kshisen ksnakeduel
     kspaceduel ksquares ktuberling kubrick lskat palapeli picmi
     dragonplayer elisa-player ktorrent kmail kontact kaddressbook korganizer akregator
-    "libreoffice*" gnome-tour gnome-boxes mediawriter
+    gnome-tour gnome-boxes mediawriter
 )
 
-echo "🧹 Executing safe KDE debloat..."
-sudo dnf remove -y --noautoremove "${DEBLOAT_PACKAGES[@]}" || true
+echo "🧹 Executing safe standalone application debloat..."
+for pkg in "${DEBLOAT_APPS[@]}"; do
+    sudo dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
+done
 
 # ------------------------------------------------------------------------------
 # 14. PERMISSIONS & FINISH
