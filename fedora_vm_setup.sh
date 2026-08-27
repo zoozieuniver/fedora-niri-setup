@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% PERFECT DAVINCI & VMWARE WORKSTATION)
+# FEDORA VM MASTER SETUP SCRIPT (100% WORKING DAVINCI -i -y & VMWARE BUNDLE)
 # ==============================================================================
 set -e
 
@@ -140,6 +140,11 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     p7zip \
     p7zip-plugins \
     unrar \
+    apr \
+    apr-util \
+    zlib \
+    zlib-devel \
+    libpng12 \
     kernel-headers \
     kernel-devel \
     kernel-devel-$(uname -r) 2>/dev/null || true
@@ -200,7 +205,7 @@ if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! [ -d /opt/resolve ]; then
     if [ -n "$DAVINCI_RUN" ]; then
         chmod +x "$DAVINCI_RUN"
         echo "🚀 Executing DaVinci Resolve installer..."
-        sudo "$DAVINCI_RUN" --noconcur -i -y || true
+        sudo SKIP_PACKAGE_CHECK=1 "$DAVINCI_RUN" -i -y || true
     fi
     rm -rf "$TMP_DAVINCI"
 fi

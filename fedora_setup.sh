@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V22 BULLETPROOF)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V23 PERFECT)
 # ==============================================================================
 set -e
 
@@ -135,6 +135,11 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     p7zip \
     p7zip-plugins \
     unrar \
+    apr \
+    apr-util \
+    zlib \
+    zlib-devel \
+    libpng12 \
     kernel-headers \
     kernel-devel \
     kernel-devel-$(uname -r) 2>/dev/null || true
@@ -172,7 +177,7 @@ fi
 # ------------------------------------------------------------------------------
 echo "📦 Installing local AppImage & Zip archives (ProtonUp-Qt & DaVinci Resolve)..."
 
-PROTONUP_APPIMAGE=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "ProtonUp-Qt-*.AppImage" 2>/dev/null | head -n 1 || true)
+PROTONUP_APPIMAGE=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "ProtonUp-Qt-*.AppImage" 2>/dev/null | head -n 1 || true)
 if [ -n "$PROTONUP_APPIMAGE" ] && [ -f "$PROTONUP_APPIMAGE" ]; then
     echo "⚙️ Installing local ProtonUp-Qt AppImage: $PROTONUP_APPIMAGE..."
     mkdir -p "$USER_HOME/.local/bin"
@@ -182,10 +187,10 @@ if [ -n "$PROTONUP_APPIMAGE" ] && [ -f "$PROTONUP_APPIMAGE" ]; then
     sudo chmod +x /usr/local/bin/protonup-qt
 fi
 
-DAVINCI_ZIP=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "DaVinci_Resolve_*.zip" 2>/dev/null | head -n 1 || true)
+DAVINCI_ZIP=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "DaVinci_Resolve_*.zip" 2>/dev/null | head -n 1 || true)
 if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! [ -d /opt/resolve ]; then
     echo "🎬 Unpacking and installing local DaVinci Resolve archive: $DAVINCI_ZIP..."
-    TMP_DAVINCI="/tmp/davinci_unpack"
+    TMP_DAVINCI="/tmp/davinci_unpack_dir"
     rm -rf "$TMP_DAVINCI"
     mkdir -p "$TMP_DAVINCI"
     unzip -q "$DAVINCI_ZIP" -d "$TMP_DAVINCI" || true
@@ -193,7 +198,7 @@ if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! [ -d /opt/resolve ]; then
     if [ -n "$DAVINCI_RUN" ]; then
         chmod +x "$DAVINCI_RUN"
         echo "🚀 Executing DaVinci Resolve installer..."
-        sudo "$DAVINCI_RUN" --noconcur -i -y || true
+        sudo SKIP_PACKAGE_CHECK=1 "$DAVINCI_RUN" -i -y || true
     fi
     rm -rf "$TMP_DAVINCI"
 fi
@@ -202,8 +207,8 @@ fi
 # 6. VMWARE WORKSTATION INSTALLER & KERNEL MODULES BUILDER
 # ------------------------------------------------------------------------------
 if ! command -v vmware &> /dev/null; then
-    echo "📥 Installing VMware Workstation Workstation bundle..."
-    TMP_VM="/tmp/vmware_install"
+    echo "📥 Downloading and installing VMware Workstation bundle..."
+    TMP_VM="/tmp/vmware_install_dir"
     rm -rf "$TMP_VM"
     mkdir -p "$TMP_VM"
     cd "$TMP_VM"
@@ -222,9 +227,9 @@ fi
 
 # Build VMware host kernel modules (vmmon & vmnet) from local tar.gz
 echo "⚙️ Building VMware host kernel modules (vmmon & vmnet)..."
-VMWARE_TAR=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "vmware-host-modules-*.tar.gz" 2>/dev/null | head -n 1 || true)
+VMWARE_TAR=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "vmware-host-modules-*.tar.gz" 2>/dev/null | head -n 1 || true)
 
-TMP_MOD="/tmp/vmware_mod_build"
+TMP_MOD="/tmp/vmware_mod_build_dir"
 rm -rf "$TMP_MOD"
 mkdir -p "$TMP_MOD"
 cd "$TMP_MOD"
@@ -364,8 +369,8 @@ for pkg in "${EXACT_DEBLOAT_PACKAGES[@]}"; do
     sudo dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
 done
 
-# Re-verify SDDM and desktop portals
-sudo dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
+# Re-verify SDDM, Discover, and desktop portals for streaming
+sudo dnf install -y --allowerasing sddm sddm-kcm plasma-discover firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 12. PERMISSIONS & FINISH
