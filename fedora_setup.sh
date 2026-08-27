@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V20 FINAL)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V21 PERFECT)
 # ==============================================================================
 set -e
 
@@ -38,7 +38,7 @@ fi
 # ------------------------------------------------------------------------------
 echo "📦 Updating system and enabling RPM repositories..."
 sudo dnf update -y || true
-sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm || true
+sudo dnf install -y --allowerasing --nogpgcheck https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm || true
 
 # Enable Helium COPR & Flathub
 echo "🌐 Enabling Helium Browser COPR repository..."
@@ -61,11 +61,12 @@ echo "🧹 Resolving pre-installed Fedora 44 kmime package conflicts..."
 sudo dnf remove -y kmime kmime-libs 2>/dev/null || true
 sudo rpm -e --nodeps kmime 2>/dev/null || true
 
-echo "🖥️ Installing Niri Desktop environment, Helium browser, and ALL NixOS applications..."
+echo "🖥️ Installing Niri Desktop environment, Helium browser, Discover, and ALL NixOS applications..."
 sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     helium-bin \
     sddm \
     sddm-kcm \
+    plasma-discover \
     niri \
     waybar \
     SwayNotificationCenter \
@@ -316,28 +317,28 @@ EOF
 sudo sysctl --system 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 11. PURGE ALL KDE PLASMA DESKTOP, K-APPS & FIREFOX COMPLETELY
+# 11. PURGE EXTRA BLOATWARE WHILE PRESERVING DISCOVER, SDDM & STREAMING
 # ------------------------------------------------------------------------------
 DEBLOAT_APPS=(
-    plasma-desktop plasma-workspace plasma-workspace-wayland plasma-workspace-libs
-    plasma-nm plasma-pa kwin kwin-wayland kwin-common kde-cli-tools kservice kio-extras systemsettings
-    firefox alacritty mpv mpv-libs konsole dolphin gwenview okular neochat spectacle orca
-    plasma-discover kolourpaint ark kwrite skanpage kamoso partitionmanager kcalc filelight kdebugsettings
+    abrt abrt-desktop setroubleshoot setroubleshoot-gui
+    dragonplayer orca partitionmanager systemsettings
+    alacritty mpv mpv-libs konsole dolphin gwenview okular neochat spectacle
+    kolourpaint ark kwrite skanpage kamoso kcalc filelight kdebugsettings
     kde-connect kde-connect-libs kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager
     kf5-kwallet kf6-kwallet kf6-kwallet-libs kmouth kcharselect kamera sweeper kfind kget krdc krfb kjournald krenamer
     kmahjongg kpat kmines ksudoku knavalbattle kbounce kblocks klines kreversi kbattleship kblackbox bovo granatier kapman
     katomic kdiamond kigo killbots kiriki kjumpingcube knetwalk knights kolf kollision kshisen ksnakeduel kspaceduel
-    ksquares ktuberling kubrick lskat palapeli picmi dragonplayer elisa-player ktorrent kmail kontact kaddressbook
+    ksquares ktuberling kubrick lskat palapeli picmi elisa-player ktorrent kmail kontact kaddressbook
     korganizer akregator gnome-tour gnome-boxes mediawriter
 )
 
-echo "🧹 Purging ALL KDE Plasma Desktop & extra bloatware..."
+echo "🧹 Purging extra bloatware..."
 for pkg in "${DEBLOAT_APPS[@]}"; do
     sudo dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
 done
 
-# Re-verify SDDM and desktop portals
-sudo dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
+# Re-verify SDDM, Discover, and desktop portals for streaming
+sudo dnf install -y --allowerasing sddm sddm-kcm plasma-discover firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 12. PERMISSIONS & FINISH

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  fedora_debloat_kde.sh — Повне очищення від KDE Plasma Desktop та блоатвару
+#  fedora_debloat_kde.sh — Чистка блоатвару ЗБЕРІГАЮЧИ Discover, SDDM, PipeWire
 # ==============================================================================
-#  Видаляє KDE Plasma Desktop, Gwenview, Okular, Discover, KConnect, Firefox, MPV
-#  ЗБЕРІГАЮЧИ SDDM, PipeWire, FirewallD та Niri!
+#  Видаляє ABRT, SELinux Troubleshooter, Dragon, Orca, Partition Manager, Alacritty
+#  ЗБЕРІГАЮЧИ Plasma Discover (магазин), SDDM (екран входу), PipeWire (аудіо та стрімінг)!
 # ==============================================================================
 
 set -euo pipefail
@@ -14,31 +14,22 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "========================================================================"
-echo " 🧹 Повне очищення від KDE Plasma Desktop та всіх K-додатків"
+echo " 🧹 Повне очищення системи (Збережено Discover, SDDM, Pipewire)"
 echo "========================================================================"
 
 # Виправлення симлінку диспетчера входу для SDDM
 rm -f /etc/systemd/system/display-manager.service 2>/dev/null || true
 
-# Повний список KDE Plasma компонентів та непотрібних програм для видалення
 DEBLOAT_PACKAGES=(
-    # KDE Plasma Desktop & Shell
-    plasma-desktop
-    plasma-workspace
-    plasma-workspace-wayland
-    plasma-workspace-libs
-    plasma-nm
-    plasma-pa
-    kwin
-    kwin-wayland
-    kwin-common
-    kde-cli-tools
-    kservice
-    kio-extras
+    # Зайві звіти та діагностики зі скріншотів
+    "abrt*"
+    "setroubleshoot*"
+    dragonplayer
+    orca
+    partitionmanager
     systemsettings
     
-    # Зайві програми з меню (є Helium, Thunar, Kitty, VLC)
-    firefox
+    # Зайві програвачі та термінали (є Kitty та VLC)
     alacritty
     mpv mpv-libs mpv-devel
     konsole
@@ -47,14 +38,11 @@ DEBLOAT_PACKAGES=(
     okular
     neochat
     spectacle
-    orca
-    plasma-discover
     kolourpaint
     ark
     kwrite
     skanpage
     kamoso
-    partitionmanager
     kcalc
     filelight
     kdebugsettings
@@ -72,25 +60,25 @@ DEBLOAT_PACKAGES=(
     kiriki kjumpingcube knetwalk knights kolf kollision kshisen ksnakeduel
     kspaceduel ksquares ktuberling kubrick lskat palapeli picmi
 
-    # Пошта, поштові служби та застарілі програвачі
-    dragonplayer elisa-player ktorrent kmail kontact kaddressbook korganizer akregator
+    # Пошта та застарілі поштові служби
+    elisa-player ktorrent kmail kontact kaddressbook korganizer akregator
 
     # Додаткові офісні пакети
     "libreoffice*" gnome-tour gnome-boxes mediawriter
 )
 
-echo "🚀 Видалення KDE Plasma Desktop та блоатвару (--noautoremove)..."
+echo "🚀 Видалення блоатвару (--noautoremove)..."
 for pkg in "${DEBLOAT_PACKAGES[@]}"; do
     dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
 done
 
-echo "🛡️ Реєстрація чистих служб SDDM, Firewalld, Pipewire та порталів Niri..."
-dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite || true
+echo "🛡️ Перевірка Discover, SDDM, Firewalld, Pipewire та порталів для стрімінгу..."
+dnf install -y --allowerasing sddm sddm-kcm plasma-discover firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite || true
 
 rm -f /etc/systemd/system/display-manager.service 2>/dev/null || true
 systemctl set-default graphical.target
 systemctl enable --now sddm firewalld || true
 
 echo "========================================================================"
-echo " 🎉 Очищення успішно завершено! Всі KDE додатки та Firefox видалено."
+echo " 🎉 Очищення успішно завершено! Discover, SDDM та стрімінг працюють."
 echo "========================================================================"

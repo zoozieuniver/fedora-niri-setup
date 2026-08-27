@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% COMPLETE & GRUB RUNLEVEL FIX)
+# FEDORA VM MASTER SETUP SCRIPT (100% DISCOVER, SDDM, STREAMING & LOCAL ARCHIVE)
 # ==============================================================================
 set -e
 
@@ -41,9 +41,9 @@ fi
 # ------------------------------------------------------------------------------
 # 2. UPDATE SYSTEM & ENABLE RPM FUSION, COPR & FLATHUB REPOSITORIES
 # ------------------------------------------------------------------------------
-echo "📦 Updating system and enabling RPM repositories..."
+echo "📦 Updating system and enabling RPM Fusion & COPR repositories..."
 sudo dnf update -y || true
-sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm || true
+sudo dnf install -y --allowerasing --nogpgcheck https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm || true
 
 # Enable Helium Browser COPR & Flathub
 echo "🌐 Enabling Helium Browser COPR repository..."
@@ -66,11 +66,12 @@ echo "🧹 Resolving pre-installed Fedora 44 kmime package conflicts..."
 sudo dnf remove -y kmime kmime-libs 2>/dev/null || true
 sudo rpm -e --nodeps kmime 2>/dev/null || true
 
-echo "🖥️ Installing Niri Desktop environment, Helium browser, and required applications..."
+echo "🖥️ Installing Niri Desktop environment, Helium browser, Discover, and required applications..."
 sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     helium-bin \
     sddm \
     sddm-kcm \
+    plasma-discover \
     niri \
     waybar \
     SwayNotificationCenter \
@@ -279,7 +280,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_MOD"
 
 # ------------------------------------------------------------------------------
-# 9. UNPACK DOTFILES, THUNAR, KITTY, WAYBAR, WOFI CONFIGS & FONTS
+# 9. UNPACK MASTER DOTFILES, FONTS, CURSORS & WOFI SOUL.PNG HEART LOGO
 # ------------------------------------------------------------------------------
 ARCHIVE_PATH="$USER_HOME/Downloads/all-customizations-and-dotfiles.tar.gz"
 [ -f "$ARCHIVE_PATH" ] || ARCHIVE_PATH="./all-customizations-and-dotfiles.tar.gz"
@@ -289,10 +290,15 @@ if [ -f "$ARCHIVE_PATH" ]; then
     tar -xzf "$ARCHIVE_PATH" -C "$USER_HOME" 2>/dev/null || true
     
     # Fix paths from host (/home/zoozienix -> $USER_HOME)
-    find "$USER_HOME/.config/niri" "$USER_HOME/.local/bin" -type f -exec sed -i "s|/home/zoozienix|$USER_HOME|g" {} + 2>/dev/null || true
-    find "$USER_HOME/.config/niri" "$USER_HOME/.local/bin" -type f -exec sed -i "s|/home/zoozie_fedora|$USER_HOME|g" {} + 2>/dev/null || true
+    find "$USER_HOME/.config/niri" "$USER_HOME/.local/bin" "$USER_HOME/.config/wofi" -type f -exec sed -i "s|/home/zoozienix|$USER_HOME|g" {} + 2>/dev/null || true
+    find "$USER_HOME/.config/niri" "$USER_HOME/.local/bin" "$USER_HOME/.config/wofi" -type f -exec sed -i "s|/home/zoozie_fedora|$USER_HOME|g" {} + 2>/dev/null || true
 else
     echo "⚠️ Master archive not found at $ARCHIVE_PATH. Skipping extraction."
+fi
+
+# Fix Wofi style.css relative soul.png pathing
+if [ -f "$USER_HOME/.config/wofi/style.css" ]; then
+    sed -i 's|file:///home/[^/]*/.config/wofi/soul.png|soul.png|g' "$USER_HOME/.config/wofi/style.css" || true
 fi
 
 # ------------------------------------------------------------------------------
@@ -308,7 +314,7 @@ fi
 # ------------------------------------------------------------------------------
 # 11. REGISTER FONTS & KITTY BASH FASTFETCH INTEGRATION
 # ------------------------------------------------------------------------------
-echo "🔤 Registering Monocraft fonts and Deltarune cursors..."
+echo "🔤 Registering Monocraft & Determination fonts and Deltarune cursors..."
 fc-cache -fv 2>/dev/null || true
 
 rm -rf "$USER_HOME/.icons/default" 2>/dev/null || true
@@ -381,28 +387,28 @@ Session=niri.desktop
 EOF
 
 # ------------------------------------------------------------------------------
-# 15. PURGE ALL KDE PLASMA DESKTOP, K-APPS & FIREFOX COMPLETELY
+# 15. PURGE EXTRA BLOATWARE WHILE PRESERVING DISCOVER, SDDM & STREAMING
 # ------------------------------------------------------------------------------
 DEBLOAT_APPS=(
-    plasma-desktop plasma-workspace plasma-workspace-wayland plasma-workspace-libs
-    plasma-nm plasma-pa kwin kwin-wayland kwin-common kde-cli-tools kservice kio-extras systemsettings
-    firefox alacritty mpv mpv-libs konsole dolphin gwenview okular neochat spectacle orca
-    plasma-discover kolourpaint ark kwrite skanpage kamoso partitionmanager kcalc filelight kdebugsettings
+    abrt abrt-desktop setroubleshoot setroubleshoot-gui
+    dragonplayer orca partitionmanager systemsettings
+    alacritty mpv mpv-libs konsole dolphin gwenview okular neochat spectacle
+    kolourpaint ark kwrite skanpage kamoso kcalc filelight kdebugsettings
     kde-connect kde-connect-libs kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager
     kf5-kwallet kf6-kwallet kf6-kwallet-libs kmouth kcharselect kamera sweeper kfind kget krdc krfb kjournald krenamer
     kmahjongg kpat kmines ksudoku knavalbattle kbounce kblocks klines kreversi kbattleship kblackbox bovo granatier kapman
     katomic kdiamond kigo killbots kiriki kjumpingcube knetwalk knights kolf kollision kshisen ksnakeduel kspaceduel
-    ksquares ktuberling kubrick lskat palapeli picmi dragonplayer elisa-player ktorrent kmail kontact kaddressbook
+    ksquares ktuberling kubrick lskat palapeli picmi elisa-player ktorrent kmail kontact kaddressbook
     korganizer akregator gnome-tour gnome-boxes mediawriter
 )
 
-echo "🧹 Purging ALL KDE Plasma Desktop & extra bloatware..."
+echo "🧹 Purging extra bloatware..."
 for pkg in "${DEBLOAT_APPS[@]}"; do
     sudo dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
 done
 
-# Re-verify SDDM and desktop portals
-sudo dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
+# Re-verify SDDM, Discover, and desktop portals for streaming
+sudo dnf install -y --allowerasing sddm sddm-kcm plasma-discover firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 16. PERMISSIONS & FINISH
