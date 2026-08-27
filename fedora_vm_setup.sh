@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% FEATURE PARITY WITH FULL SETUP)
+# FEDORA VM MASTER SETUP SCRIPT (100% VERBOSE LOGGING & COMPLETE PARITY)
 # ==============================================================================
-#  Installs Niri, Waybar, Wofi, Kitty, Thunar, Fonts, Cursors, Wallpaper Engine,
-#  Helium, Vesktop, Heroic, OnlyOffice, Flatpaks, VMware, Btrfs +C, Printer,
-#  SDDM auto-login, Alt+ keybindings for VM, and runs safe KDE debloat.
-# ==============================================================================
-
 set -e
 
-# Enable full execution logging to /tmp/fedora_vm_setup.log and ~/fedora_vm_setup.log
+# ------------------------------------------------------------------------------
+# 0. ABSOLUTE COMPLETE VERBOSE LOGGING SETUP (SHOWS EVERYTHING)
+# ------------------------------------------------------------------------------
+LOGFILE1="/tmp/fedora_vm_setup.log"
+LOGFILE2="/var/log/fedora_vm_setup.log"
+LOGFILE3="$HOME/fedora_vm_setup.log"
+
+touch "$LOGFILE1" "$LOGFILE2" "$LOGFILE3" 2>/dev/null || true
+chmod 666 "$LOGFILE1" "$LOGFILE2" "$LOGFILE3" 2>/dev/null || true
+
+exec &> >(tee -a "$LOGFILE1" "$LOGFILE2" "$LOGFILE3")
+set -x # Print EVERY single shell command, line, variable, error, and output live
+
 TARGET_USER="${SUDO_USER:-$USER}"
 USER_HOME=$(eval echo "~$TARGET_USER")
-LOGFILE="/tmp/fedora_vm_setup.log"
-USER_LOGFILE="$USER_HOME/fedora_vm_setup.log"
-
-touch "$LOGFILE" "$USER_LOGFILE" 2>/dev/null || true
-exec > >(tee -i "$LOGFILE" "$USER_LOGFILE") 2>&1
-set -x # Enable 100% verbose shell tracing (+C)
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ $EUID -ne 0 ]]; then
@@ -286,9 +286,9 @@ fi
 # ------------------------------------------------------------------------------
 # 13. PERMISSIONS & FINISH
 # ------------------------------------------------------------------------------
-sudo chown -R "$TARGET_USER:$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" 2>/dev/null || true
+sudo chown -R "$TARGET_USER:$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/fedora_vm_setup.log" 2>/dev/null || true
 
 echo "========================================================================"
 echo " 🎉 Fedora Niri VM Master Setup Completed Successfully!"
-echo " Log files saved to: $LOGFILE and $USER_LOGFILE"
+echo " Log files saved to: $LOGFILE1, $LOGFILE2, and $LOGFILE3"
 echo "========================================================================"
