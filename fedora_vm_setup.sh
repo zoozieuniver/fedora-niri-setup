@@ -40,7 +40,8 @@ sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flat
 # 2. INSTALL SYSTEM PACKAGES
 # ------------------------------------------------------------------------------
 echo "🧹 Resolving pre-installed Fedora 44 kmime package conflicts..."
-sudo dnf remove -y kmime 2>/dev/null || true
+sudo dnf remove -y kmime kmime-libs 2>/dev/null || true
+sudo rpm -e --nodeps kmime 2>/dev/null || true
 
 echo "🖥️ Installing Niri Desktop environment and all required system applications..."
 sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
