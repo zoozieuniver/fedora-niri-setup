@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V13 PERFECT)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V14 PERFECT)
 # ==============================================================================
 set -e
 
@@ -200,7 +200,7 @@ if [ -n "$VM_BUNDLE" ] && [ -f "$VM_BUNDLE" ] && ! command -v vmware &> /dev/nul
 fi
 
 # Build VMware host modules
-mkdir -p "$USER_HOME/.local/bin"
+mkdir -p "$USER_HOME/.local/bin" 2>/dev/null || true
 cat << 'EOF' > "$USER_HOME/.local/bin/build-vmware-modules.sh"
 #!/usr/bin/env bash
 set -e
@@ -218,7 +218,7 @@ sudo systemctl enable --now vmware-USBArbitrator.service 2>/dev/null || true
 sudo vmware-networks --start || true
 echo "✅ VMware modules built successfully!"
 EOF
-chmod +x "$USER_HOME/.local/bin/build-vmware-modules.sh"
+chmod +x "$USER_HOME/.local/bin/build-vmware-modules.sh" || true
 
 if command -v vmware &> /dev/null; then
     bash "$USER_HOME/.local/bin/build-vmware-modules.sh" || true

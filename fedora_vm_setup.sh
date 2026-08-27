@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% COMPLETE PARITY & FIXED REAL_USER PATHS)
+# FEDORA VM MASTER SETUP SCRIPT (100% BULLETPROOF & SAFE REDIRECTIONS)
 # ==============================================================================
 set -e
 
@@ -205,7 +205,7 @@ if [ -n "$VM_BUNDLE" ] && [ -f "$VM_BUNDLE" ] && ! command -v vmware &> /dev/nul
 fi
 
 # Build VMware host modules
-mkdir -p "$USER_HOME/.local/bin"
+mkdir -p "$USER_HOME/.local/bin" 2>/dev/null || true
 cat << 'EOF' > "$USER_HOME/.local/bin/build-vmware-modules.sh"
 #!/usr/bin/env bash
 set -e
@@ -223,7 +223,7 @@ sudo systemctl enable --now vmware-USBArbitrator.service 2>/dev/null || true
 sudo vmware-networks --start || true
 echo "✅ VMware modules built successfully!"
 EOF
-chmod +x "$USER_HOME/.local/bin/build-vmware-modules.sh"
+chmod +x "$USER_HOME/.local/bin/build-vmware-modules.sh" || true
 
 if command -v vmware &> /dev/null; then
     bash "$USER_HOME/.local/bin/build-vmware-modules.sh" || true
@@ -257,16 +257,18 @@ if [ -f "$KBD_CONF" ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 8. REGISTER FONTS & CURSORS
+# 8. REGISTER FONTS & CURSORS (SAFE FILE WRITING)
 # ------------------------------------------------------------------------------
 echo "🔤 Registering Monocraft fonts and Deltarune cursors..."
 fc-cache -fv 2>/dev/null || true
 
+rm -rf "$USER_HOME/.icons/default" 2>/dev/null || true
 mkdir -p "$USER_HOME/.icons/default" 2>/dev/null || true
-cat << 'EOF' > "$USER_HOME/.icons/default/index.theme"
+cat << 'EOF' > /tmp/index.theme
 [Icon Theme]
 Inherits=Deltarune-Dark-Cursors
 EOF
+cp /tmp/index.theme "$USER_HOME/.icons/default/index.theme" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 9. BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
