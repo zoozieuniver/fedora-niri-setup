@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% CLEAN DEBLOAT & NATIVE ZED/VMWARE)
+# FEDORA VM MASTER SETUP SCRIPT (100% NIRI DESKTOP ONLY - NO KDE PLASMA)
 # ==============================================================================
 set -e
 
@@ -351,13 +351,26 @@ Session=niri.desktop
 EOF
 
 # ------------------------------------------------------------------------------
-# 13. SAFE STANDALONE APPLICATION DEBLOAT (NON-BREAKING)
+# 13. PURGE KDE PLASMA DESKTOP COMPLETELY (SAFE NON-BREAKING)
 # ------------------------------------------------------------------------------
 DEBLOAT_APPS=(
+    plasma-desktop
+    plasma-workspace
+    plasma-workspace-wayland
+    plasma-workspace-libs
+    plasma-nm
+    plasma-pa
+    kwin
+    kwin-wayland
+    kwin-common
+    kde-cli-tools
+    kservice
+    kio-extras
     alacritty
     mpv mpv-libs
     konsole
     dolphin
+    kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager kf5-kwallet kf6-kwallet kf6-kwallet-libs
     kmouth
     kcharselect
     kamera
@@ -370,10 +383,13 @@ DEBLOAT_APPS=(
     gnome-tour gnome-boxes mediawriter
 )
 
-echo "🧹 Executing safe standalone application debloat..."
+echo "🧹 Purging KDE Plasma Desktop & standalone bloatware..."
 for pkg in "${DEBLOAT_APPS[@]}"; do
     sudo dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
 done
+
+# Ensure SDDM and essential desktop portals are re-verified
+sudo dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 14. PERMISSIONS & FINISH

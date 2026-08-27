@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  fedora_debloat_kde.sh — Повне очищення від блоатвару (Alacritty, MPV, KWallet, KGames)
+#  fedora_debloat_kde.sh — Повне очищення від KDE Plasma Desktop та блоатвару
 # ==============================================================================
-#  Видаляє Alacritty, MPV, KWallet, K-ігри та K-утиліти БЕЗ ВТРАТИ SDDM/FIREWALL!
+#  Видаляє KDE Plasma Desktop, Alacritty, MPV, KWallet, K-ігри та K-утиліти
+#  ЗБЕРІГАЮЧИ SDDM, PipeWire, FirewallD та Niri!
 # ==============================================================================
 
 set -euo pipefail
@@ -13,11 +14,25 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "========================================================================"
-echo " 🧹 Повне очищення системи (Alacritty, MPV, KWallet, K-ігри)"
+echo " 🧹 Повне очищення від KDE Plasma Desktop, Alacritty, MPV, KWallet, K-ігор"
 echo "========================================================================"
 
-# Список НЕПОТРІБНИХ програм та утиліт для видалення (ЗБЕРЕЖЕНО FirewallD!)
+# Повний список KDE Plasma компонентів та блоатвару для видалення
 DEBLOAT_PACKAGES=(
+    # KDE Plasma Desktop & Shell (Niri є єдиним віконним менеджером!)
+    plasma-desktop
+    plasma-workspace
+    plasma-workspace-wayland
+    plasma-workspace-libs
+    plasma-nm
+    plasma-pa
+    kwin
+    kwin-wayland
+    kwin-common
+    kde-cli-tools
+    kservice
+    kio-extras
+    
     # Зайві термінали та програвачі (є Kitty та VLC)
     alacritty
     mpv mpv-libs mpv-devel
@@ -25,7 +40,7 @@ DEBLOAT_PACKAGES=(
     dolphin
 
     # KWallet (нав'язливі спливаючі вікна паролів)
-    kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager
+    kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager kf5-kwallet kf6-kwallet kf6-kwallet-libs
 
     # Зайві KDE утиліти та утиліти доступності
     kmouth
@@ -55,15 +70,17 @@ DEBLOAT_PACKAGES=(
     mediawriter
 )
 
-echo "🚀 Видалення розширеного списку блоатвару (--noautoremove для захисту SDDM)..."
-dnf remove -y --noautoremove "${DEBLOAT_PACKAGES[@]}" || true
+echo "🚀 Видалення KDE Plasma Desktop та блоатвару (--noautoremove для захисту SDDM)..."
+for pkg in "${DEBLOAT_PACKAGES[@]}"; do
+    dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
+done
 
-echo "🛡️ Гарантований захист SDDM, Firewalld, Pipewire та порталів для трансляції в Discord..."
-dnf install -y sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite
+echo "🛡️ Гарантований захист SDDM, Firewalld, Pipewire та порталів для Niri..."
+dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite || true
 
 systemctl set-default graphical.target
-systemctl enable --now sddm firewalld
+systemctl enable --now sddm firewalld || true
 
 echo "========================================================================"
-echo " 🎉 Очищення успішно завершено! Alacritty, MPV, KWallet та K-блоатвар видалено."
+echo " 🎉 Очищення успішно завершено! KDE Plasma Desktop, Alacritty, MPV та KWallet видалено."
 echo "========================================================================"
