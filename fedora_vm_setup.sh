@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% BULLETPROOF DAVINCI, VMWARE & DEBLOAT)
+# FEDORA VM MASTER SETUP SCRIPT (100% PERFECT DAVINCI & VMWARE WORKSTATION)
 # ==============================================================================
 set -e
 
@@ -178,7 +178,7 @@ fi
 echo "📦 Installing local AppImage & Zip archives (ProtonUp-Qt & DaVinci Resolve)..."
 
 # Install ProtonUp-Qt from local AppImage
-PROTONUP_APPIMAGE=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "ProtonUp-Qt-*.AppImage" 2>/dev/null | head -n 1 || true)
+PROTONUP_APPIMAGE=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "ProtonUp-Qt-*.AppImage" 2>/dev/null | head -n 1 || true)
 if [ -n "$PROTONUP_APPIMAGE" ] && [ -f "$PROTONUP_APPIMAGE" ]; then
     echo "⚙️ Installing local ProtonUp-Qt AppImage: $PROTONUP_APPIMAGE..."
     mkdir -p "$USER_HOME/.local/bin"
@@ -189,10 +189,10 @@ if [ -n "$PROTONUP_APPIMAGE" ] && [ -f "$PROTONUP_APPIMAGE" ]; then
 fi
 
 # Install DaVinci Resolve from local Zip
-DAVINCI_ZIP=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "DaVinci_Resolve_*.zip" 2>/dev/null | head -n 1 || true)
+DAVINCI_ZIP=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "DaVinci_Resolve_*.zip" 2>/dev/null | head -n 1 || true)
 if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! [ -d /opt/resolve ]; then
     echo "🎬 Unpacking and installing local DaVinci Resolve archive: $DAVINCI_ZIP..."
-    TMP_DAVINCI="/tmp/davinci_unpack"
+    TMP_DAVINCI="/tmp/davinci_unpack_dir"
     rm -rf "$TMP_DAVINCI"
     mkdir -p "$TMP_DAVINCI"
     unzip -q "$DAVINCI_ZIP" -d "$TMP_DAVINCI" || true
@@ -209,8 +209,8 @@ fi
 # 6. VMWARE WORKSTATION INSTALLER & KERNEL MODULES BUILDER
 # ------------------------------------------------------------------------------
 if ! command -v vmware &> /dev/null; then
-    echo "📥 Installing VMware Workstation Workstation bundle..."
-    TMP_VM="/tmp/vmware_install"
+    echo "📥 Downloading and installing VMware Workstation bundle..."
+    TMP_VM="/tmp/vmware_install_dir"
     rm -rf "$TMP_VM"
     mkdir -p "$TMP_VM"
     cd "$TMP_VM"
@@ -229,9 +229,9 @@ fi
 
 # Build VMware host kernel modules (vmmon & vmnet) from local tar.gz
 echo "⚙️ Building VMware host kernel modules (vmmon & vmnet)..."
-VMWARE_TAR=$(find /tmp "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "vmware-host-modules-*.tar.gz" 2>/dev/null | head -n 1 || true)
+VMWARE_TAR=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "vmware-host-modules-*.tar.gz" 2>/dev/null | head -n 1 || true)
 
-TMP_MOD="/tmp/vmware_mod_build"
+TMP_MOD="/tmp/vmware_mod_build_dir"
 rm -rf "$TMP_MOD"
 mkdir -p "$TMP_MOD"
 cd "$TMP_MOD"
