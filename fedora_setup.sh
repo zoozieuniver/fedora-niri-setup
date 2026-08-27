@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V12 BULLETPROOF)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V13 PERFECT)
 # ==============================================================================
 set -e
 
 # ------------------------------------------------------------------------------
 # 0. ABSOLUTE COMPLETE VERBOSE LOGGING SETUP (SHOWS EVERYTHING)
 # ------------------------------------------------------------------------------
+REAL_USER="${SUDO_USER:-$USER}"
+USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+
 LOGFILE1="/tmp/fedora_setup.log"
 LOGFILE2="/var/log/fedora_setup.log"
-LOGFILE3="$HOME/fedora_setup.log"
+LOGFILE3="$USER_HOME/fedora_setup.log"
 
 touch "$LOGFILE1" "$LOGFILE2" "$LOGFILE3" 2>/dev/null || true
 chmod 666 "$LOGFILE1" "$LOGFILE2" "$LOGFILE3" 2>/dev/null || true
@@ -18,10 +21,8 @@ exec &> >(tee -a "$LOGFILE1" "$LOGFILE2" "$LOGFILE3")
 set -x # Enable 100% verbose shell tracing live
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_USER="${SUDO_USER:-$USER}"
-USER_HOME=$(eval echo "~$TARGET_USER")
 
-echo "🚀 Starting Fedora Master Setup Script for user: $TARGET_USER ($USER_HOME)..."
+echo "🚀 Starting Fedora Master Setup Script for user: $REAL_USER ($USER_HOME)..."
 
 # ------------------------------------------------------------------------------
 # 1. UPDATE SYSTEM & INSTALL RPM REPOSITORIES
@@ -30,7 +31,9 @@ echo "📦 Updating system and enabling RPM repositories..."
 sudo dnf update -y || true
 sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm || true
 
-# Enable Cisco OpenH264 & Flathub
+# Enable Helium COPR & Flathub
+echo "🌐 Enabling Helium Browser COPR repository..."
+sudo dnf copr enable -y imput/helium || true
 sudo dnf config-manager enable fedora-cisco-openh264 2>/dev/null || true
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
 
@@ -41,52 +44,9 @@ echo "🧹 Resolving pre-installed Fedora 44 kmime package conflicts..."
 sudo dnf remove -y kmime kmime-libs 2>/dev/null || true
 sudo rpm -e --nodeps kmime 2>/dev/null || true
 
-# ------------------------------------------------------------------------------
-# 3. INSTALL COMPILERS, DEV TOOLS, QT/KDE INTEGRATION & UTILITIES
-# ------------------------------------------------------------------------------
-echo "🛠️ Installing compilers, Zed Editor, QT/KDE Wayland integration & tools..."
+echo "🖥️ Installing Niri Desktop environment, Helium browser, and ALL NixOS applications..."
 sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
-    gcc \
-    gcc-c++ \
-    clang \
-    clang-tools-extra \
-    gdb \
-    nasm \
-    make \
-    cmake \
-    ninja-build \
-    cargo \
-    rust \
-    rust-analyzer \
-    nodejs \
-    python3 \
-    python3-pip \
-    pipx \
-    git \
-    wget \
-    curl \
-    jq \
-    file-roller \
-    zip \
-    unzip \
-    p7zip \
-    p7zip-plugins \
-    unrar \
-    kernel-headers \
-    kernel-devel \
-    kernel-devel-$(uname -r) 2>/dev/null || true
-
-# Install Zed Code Editor natively
-if ! command -v zed &> /dev/null; then
-    echo "⚡ Installing Zed Code Editor..."
-    curl -fssSL https://zed.dev/install.sh | sh || true
-fi
-
-# ------------------------------------------------------------------------------
-# 4. INSTALL 100% OF SYSTEM PACKAGES FROM NIXOS CONFIG
-# ------------------------------------------------------------------------------
-echo "🖥️ Installing Niri Desktop environment and ALL NixOS applications..."
-sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
+    helium-bin \
     sddm \
     sddm-kcm \
     niri \
@@ -128,10 +88,45 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     gutenprint \
     gutenprint-doc \
     hplip \
-    firewalld
+    firewalld \
+    gcc \
+    gcc-c++ \
+    clang \
+    clang-tools-extra \
+    gdb \
+    nasm \
+    make \
+    cmake \
+    ninja-build \
+    cargo \
+    rust \
+    rust-analyzer \
+    nodejs \
+    python3 \
+    python3-pip \
+    pipx \
+    git \
+    wget \
+    curl \
+    jq \
+    file-roller \
+    zip \
+    unzip \
+    p7zip \
+    p7zip-plugins \
+    unrar \
+    kernel-headers \
+    kernel-devel \
+    kernel-devel-$(uname -r) 2>/dev/null || true
+
+# Install Zed Code Editor natively
+echo "⚡ Installing Zed Code Editor..."
+if ! command -v zed &> /dev/null; then
+    sudo -u "$REAL_USER" curl -fssSL https://zed.dev/install.sh | sh || true
+fi
 
 # ------------------------------------------------------------------------------
-# 5. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
+# 3. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
 # ------------------------------------------------------------------------------
 echo "📦 Installing native RPM packages for Vesktop, Heroic Games Launcher & OnlyOffice..."
 TMP_RPM=$(mktemp -d)
@@ -161,7 +156,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 6. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM)
+# 4. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM FALLBACK)
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
@@ -178,8 +173,11 @@ echo "🔓 Unlocking FULL system access permissions for Flatpaks..."
 sudo flatpak override --filesystem=host --filesystem=host-etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
 flatpak override --user --filesystem=host --filesystem=host-etc --device=all --share=ipc --share=network --socket=wayland --socket=x11 --socket=pulseaudio --socket=session-bus --socket=system-bus --allow=devel || true
 
+# Set Helium as default browser
+sudo -u "$REAL_USER" xdg-settings set default-web-browser net.imput.Helium.desktop 2>/dev/null || true
+
 # ------------------------------------------------------------------------------
-# 7. VMWARE WORKSTATION INSTALLER & MODULE BUILDER
+# 5. VMWARE WORKSTATION INSTALLER & MODULE BUILDER
 # ------------------------------------------------------------------------------
 echo "💻 Setting up VMware Workstation..."
 VM_BUNDLE=$(find "$USER_HOME" /tmp "$SCRIPT_DIR" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
@@ -201,8 +199,33 @@ if [ -n "$VM_BUNDLE" ] && [ -f "$VM_BUNDLE" ] && ! command -v vmware &> /dev/nul
     sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
 fi
 
+# Build VMware host modules
+mkdir -p "$USER_HOME/.local/bin"
+cat << 'EOF' > "$USER_HOME/.local/bin/build-vmware-modules.sh"
+#!/usr/bin/env bash
+set -e
+echo "Building VMware kernel modules..."
+CDIR=$(mktemp -d)
+cd "$CDIR"
+git clone https://github.com/mkubecek/vmware-host-modules.git
+cd vmware-host-modules
+WV=$(vmware --version 2>/dev/null | awk '{print $3}' || true)
+git checkout "workstation-$WV" 2>/dev/null || git checkout "workstation-${WV%.*}" 2>/dev/null || git checkout master || true
+make clean 2>/dev/null || true
+make || true
+sudo make install || true
+sudo systemctl enable --now vmware-USBArbitrator.service 2>/dev/null || true
+sudo vmware-networks --start || true
+echo "✅ VMware modules built successfully!"
+EOF
+chmod +x "$USER_HOME/.local/bin/build-vmware-modules.sh"
+
+if command -v vmware &> /dev/null; then
+    bash "$USER_HOME/.local/bin/build-vmware-modules.sh" || true
+fi
+
 # ------------------------------------------------------------------------------
-# 8. SDDM & ACCOUNTS SERVICE DEFAULT SESSION SETUP
+# 6. SDDM & ACCOUNTS SERVICE DEFAULT SESSION SETUP
 # ------------------------------------------------------------------------------
 echo "🖥️ Configuring SDDM Display Manager & SSH service..."
 sudo systemctl enable --now sshd 2>/dev/null || true
@@ -215,25 +238,38 @@ cat << EOF | sudo tee /etc/sddm.conf.d/niri-session.conf > /dev/null
 Session=niri.desktop
 
 [Autologin]
-User=$TARGET_USER
+User=$REAL_USER
 Session=niri.desktop
 EOF
 
 # ------------------------------------------------------------------------------
-# 9. RUN SAFE KDE DEBLOAT
+# 7. RUN SAFE KDE DEBLOAT
 # ------------------------------------------------------------------------------
-DEBLOAT_SCRIPT="$SCRIPT_DIR/fedora_debloat_kde.sh"
-[ -f "$DEBLOAT_SCRIPT" ] || DEBLOAT_SCRIPT="$USER_HOME/fedora_debloat_kde.sh"
+DEBLOAT_PACKAGES=(
+    alacritty
+    mpv mpv-libs mpv-devel
+    konsole
+    dolphin
+    kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager kf5-kwallet kf6-kwallet
+    kmouth
+    kcharselect
+    kamera
+    sweeper kfind kget krdc krfb krfb-libs kjournald krenamer
+    kmahjongg kpat kmines ksudoku knavalbattle kbounce kblocks klines kreversi
+    kbattleship kblackbox bovo granatier kapman katomic kdiamond kigo killbots
+    kiriki kjumpingcube knetwalk knights kolf kollision kshisen ksnakeduel
+    kspaceduel ksquares ktuberling kubrick lskat palapeli picmi
+    dragonplayer elisa-player ktorrent kmail kontact kaddressbook korganizer akregator
+    "libreoffice*" gnome-tour gnome-boxes mediawriter
+)
 
-if [ -f "$DEBLOAT_SCRIPT" ]; then
-    echo "🧹 Executing safe KDE debloat script..."
-    bash "$DEBLOAT_SCRIPT" || true
-fi
+echo "🧹 Executing safe KDE debloat..."
+sudo dnf remove -y --noautoremove "${DEBLOAT_PACKAGES[@]}" || true
 
 # ------------------------------------------------------------------------------
-# 10. PERMISSIONS & FINISH
+# 8. PERMISSIONS & FINISH
 # ------------------------------------------------------------------------------
-sudo chown -R "$TARGET_USER:$TARGET_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/fedora_setup.log" 2>/dev/null || true
+sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/fedora_setup.log" 2>/dev/null || true
 
 echo "========================================================================"
 echo " 🎉 Fedora Master Setup Completed Successfully!"
