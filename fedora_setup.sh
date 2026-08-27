@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V18 NO KDE PLASMA)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V19 TOTAL DEBLOAT)
 # ==============================================================================
 set -e
 
@@ -158,7 +158,35 @@ if ! command -v satty &> /dev/null; then
 fi
 
 # ------------------------------------------------------------------------------
-# 4. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
+# 4. LOCAL ARCHIVE INTEGRATIONS (PROTONUP-QT APPIMAGE & DAVINCI RESOLVE ZIP)
+# ------------------------------------------------------------------------------
+echo "📦 Installing local AppImage & Zip archives (ProtonUp-Qt & DaVinci Resolve)..."
+
+PROTONUP_APPIMAGE=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "ProtonUp-Qt-*.AppImage" 2>/dev/null | head -n 1 || true)
+if [ -n "$PROTONUP_APPIMAGE" ] && [ -f "$PROTONUP_APPIMAGE" ]; then
+    echo "⚙️ Installing local ProtonUp-Qt AppImage: $PROTONUP_APPIMAGE..."
+    mkdir -p "$USER_HOME/.local/bin"
+    cp "$PROTONUP_APPIMAGE" "$USER_HOME/.local/bin/protonup-qt"
+    chmod +x "$USER_HOME/.local/bin/protonup-qt"
+    sudo cp "$PROTONUP_APPIMAGE" /usr/local/bin/protonup-qt
+    sudo chmod +x /usr/local/bin/protonup-qt
+fi
+
+DAVINCI_ZIP=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ -iname "DaVinci_Resolve_*.zip" 2>/dev/null | head -n 1 || true)
+if [ -n "$DAVINCI_ZIP" ] && [ -f "$DAVINCI_ZIP" ] && ! command -v /opt/resolve/bin/resolve &>/dev/null; then
+    echo "🎬 Installing local DaVinci Resolve archive: $DAVINCI_ZIP..."
+    TMP_DAVINCI=$(mktemp -d)
+    unzip -q "$DAVINCI_ZIP" -d "$TMP_DAVINCI" || true
+    DAVINCI_RUN=$(find "$TMP_DAVINCI" -iname "DaVinci_Resolve_*.run" 2>/dev/null | head -n 1 || true)
+    if [ -n "$DAVINCI_RUN" ]; then
+        chmod +x "$DAVINCI_RUN"
+        sudo "$DAVINCI_RUN" --noconcur -i -y || true
+    fi
+    rm -rf "$TMP_DAVINCI"
+fi
+
+# ------------------------------------------------------------------------------
+# 5. NATIVE RPM DOWNLOADS (VESKTOP, HEROIC LAUNCHER & ONLYOFFICE)
 # ------------------------------------------------------------------------------
 echo "📦 Installing native RPM packages for Vesktop, Heroic Games Launcher & OnlyOffice..."
 TMP_RPM=$(mktemp -d)
@@ -188,7 +216,7 @@ cd "$USER_HOME"
 rm -rf "$TMP_RPM"
 
 # ------------------------------------------------------------------------------
-# 5. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, PROTONUP, CZKAWKA, HELIUM, VIDEO-DOWNLOADER)
+# 6. FLATPAK SETUP (SOBER ROBLOX, VIBER, PRISMLAUNCHER, CZKAWKA, HELIUM, VIDEO-DOWNLOADER)
 # ------------------------------------------------------------------------------
 echo "🌐 Configuring Flatpak applications..."
 sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
@@ -196,7 +224,6 @@ sudo flatpak update --appstream || true
 
 sudo flatpak install -y flathub org.vinegarhq.Sober || true
 sudo flatpak install -y flathub org.prismlauncher.PrismLauncher || true
-sudo flatpak install -y flathub net.davidhi.ProtonUp-Qt || true
 sudo flatpak install -y flathub com.github.qarmin.czkawka || true
 sudo flatpak install -y flathub com.viber.Viber || true
 sudo flatpak install -y flathub net.imput.Helium || true
@@ -210,32 +237,23 @@ flatpak override --user --filesystem=host --filesystem=host-etc --device=all --s
 sudo -u "$REAL_USER" HOME="$USER_HOME" xdg-settings set default-web-browser net.imput.Helium.desktop 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 6. VMWARE WORKSTATION INSTALLER & MODULE BUILDER (FROM TAR.GZ)
+# 7. VMWARE WORKSTATION KERNEL MODULES FROM LOCAL TAR.GZ ARCHIVE
 # ------------------------------------------------------------------------------
-if ! command -v vmware &> /dev/null; then
-    echo "📥 Downloading and installing VMware Workstation..."
-    TMP_VM=$(mktemp -d)
-    cd "$TMP_VM"
-    curl -fsSL https://gist.githubusercontent.com/jetfir3/e25e74a42e7c7ac2c808a537b12dc768/raw/download_workstation.sh -o download_workstation.sh || true
-    if [ -f download_workstation.sh ]; then
-        chmod +x download_workstation.sh
-        bash download_workstation.sh -v 17.6.4 || bash download_workstation.sh || true
-        VM_BUNDLE=$(find "$TMP_VM" -iname "VMware-Workstation-*.bundle" 2>/dev/null | head -n 1 || true)
-        if [ -n "$VM_BUNDLE" ]; then
-            sudo bash "$VM_BUNDLE" --console --required --eulas-agreed || true
-        fi
-    fi
-    cd "$USER_HOME"
-    rm -rf "$TMP_VM"
-fi
+echo "⚙️ Building VMware host kernel modules (vmmon & vmnet) from local tar.gz..."
+VMWARE_TAR=$(find "$USER_HOME/Downloads" "$SCRIPT_DIR" ./ /tmp -iname "vmware-host-modules-*.tar.gz" 2>/dev/null | head -n 1 || true)
 
-# Build VMware host modules
-echo "⚙️ Building VMware host kernel modules (vmmon & vmnet)..."
 TMP_MOD=$(mktemp -d)
 cd "$TMP_MOD"
-curl -fsSL "https://github.com/user-attachments/files/19986002/vmware-host-modules-workstation-17.6.0.tar.gz" -o vmware-modules.tar.gz || true
-if [ -f vmware-modules.tar.gz ]; then
-    tar -xzf vmware-modules.tar.gz
+if [ -n "$VMWARE_TAR" ] && [ -f "$VMWARE_TAR" ]; then
+    echo "📦 Extracting local VMware modules archive: $VMWARE_TAR..."
+    tar -xzf "$VMWARE_TAR"
+else
+    echo "📥 Downloading fallback VMware modules archive..."
+    curl -fsSL "https://github.com/user-attachments/files/19986002/vmware-host-modules-workstation-17.6.0.tar.gz" -o vmware-modules.tar.gz || true
+    tar -xzf vmware-modules.tar.gz 2>/dev/null || true
+fi
+
+if [ -d vmware-host-modules* ]; then
     cd vmware-host-modules* || true
     make || true
     sudo make install || true
@@ -256,10 +274,11 @@ EOF
 fi
 
 # ------------------------------------------------------------------------------
-# 7. SDDM & ACCOUNTS SERVICE DEFAULT SESSION SETUP
+# 8. SDDM & ACCOUNTS SERVICE DEFAULT SESSION SETUP
 # ------------------------------------------------------------------------------
 echo "🖥️ Configuring SDDM Display Manager & SSH service..."
 sudo systemctl enable --now sshd 2>/dev/null || true
+sudo rm -f /etc/systemd/system/display-manager.service 2>/dev/null || true
 sudo systemctl set-default graphical.target
 sudo systemctl enable --now sddm 2>/dev/null || true
 
@@ -274,7 +293,7 @@ Session=niri.desktop
 EOF
 
 # ------------------------------------------------------------------------------
-# 8. NETWORK BBR TUNING & BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
+# 9. NETWORK BBR TUNING & BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
 # ------------------------------------------------------------------------------
 echo "⚡ Applying Network BBR & Gigabit TCP buffer optimizations..."
 cat << 'EOF' | sudo tee /etc/sysctl.d/99-gigabit-bbr.conf > /dev/null
@@ -288,48 +307,31 @@ EOF
 sudo sysctl --system 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 9. PURGE KDE PLASMA DESKTOP COMPLETELY (SAFE NON-BREAKING)
+# 10. PURGE ALL KDE PLASMA DESKTOP, K-APPS & FIREFOX COMPLETELY
 # ------------------------------------------------------------------------------
 DEBLOAT_APPS=(
-    plasma-desktop
-    plasma-workspace
-    plasma-workspace-wayland
-    plasma-workspace-libs
-    plasma-nm
-    plasma-pa
-    kwin
-    kwin-wayland
-    kwin-common
-    kde-cli-tools
-    kservice
-    kio-extras
-    alacritty
-    mpv mpv-libs
-    konsole
-    dolphin
-    kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager kf5-kwallet kf6-kwallet kf6-kwallet-libs
-    kmouth
-    kcharselect
-    kamera
-    sweeper kfind kget krdc krfb kjournald krenamer
-    kmahjongg kpat kmines ksudoku knavalbattle kbounce kblocks klines kreversi
-    kbattleship kblackbox bovo granatier kapman katomic kdiamond kigo killbots
-    kiriki kjumpingcube knetwalk knights kolf kollision kshisen ksnakeduel
-    kspaceduel ksquares ktuberling kubrick lskat palapeli picmi
-    dragonplayer elisa-player ktorrent kmail kontact kaddressbook korganizer akregator
-    gnome-tour gnome-boxes mediawriter
+    plasma-desktop plasma-workspace plasma-workspace-wayland plasma-workspace-libs
+    plasma-nm plasma-pa kwin kwin-wayland kwin-common kde-cli-tools kservice kio-extras systemsettings
+    firefox alacritty mpv mpv-libs konsole dolphin gwenview okular neochat spectacle orca
+    plasma-discover kolourpaint ark kwrite skanpage kamoso partitionmanager kcalc filelight kdebugsettings
+    kde-connect kde-connect-libs kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager
+    kf5-kwallet kf6-kwallet kf6-kwallet-libs kmouth kcharselect kamera sweeper kfind kget krdc krfb kjournald krenamer
+    kmahjongg kpat kmines ksudoku knavalbattle kbounce kblocks klines kreversi kbattleship kblackbox bovo granatier kapman
+    katomic kdiamond kigo killbots kiriki kjumpingcube knetwalk knights kolf kollision kshisen ksnakeduel kspaceduel
+    ksquares ktuberling kubrick lskat palapeli picmi dragonplayer elisa-player ktorrent kmail kontact kaddressbook
+    korganizer akregator gnome-tour gnome-boxes mediawriter
 )
 
-echo "🧹 Purging KDE Plasma Desktop & standalone bloatware..."
+echo "🧹 Purging ALL KDE Plasma Desktop & extra bloatware..."
 for pkg in "${DEBLOAT_APPS[@]}"; do
     sudo dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
 done
 
-# Ensure SDDM and essential desktop portals are re-verified
+# Re-verify SDDM and desktop portals
 sudo dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 10. PERMISSIONS & FINISH
+# 11. PERMISSIONS & FINISH
 # ------------------------------------------------------------------------------
 sudo chown -R "$REAL_USER:$REAL_USER" "$USER_HOME/.config" "$USER_HOME/.local" "$USER_HOME/.icons" "$USER_HOME/Projects" "$USER_HOME/Games" "$USER_HOME/fedora_setup.log" 2>/dev/null || true
 

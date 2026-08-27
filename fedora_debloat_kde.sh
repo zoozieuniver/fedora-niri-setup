@@ -2,7 +2,7 @@
 # ==============================================================================
 #  fedora_debloat_kde.sh — Повне очищення від KDE Plasma Desktop та блоатвару
 # ==============================================================================
-#  Видаляє KDE Plasma Desktop, Alacritty, MPV, KWallet, K-ігри та K-утиліти
+#  Видаляє KDE Plasma Desktop, Gwenview, Okular, Discover, KConnect, Firefox, MPV
 #  ЗБЕРІГАЮЧИ SDDM, PipeWire, FirewallD та Niri!
 # ==============================================================================
 
@@ -14,12 +14,15 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "========================================================================"
-echo " 🧹 Повне очищення від KDE Plasma Desktop, Alacritty, MPV, KWallet, K-ігор"
+echo " 🧹 Повне очищення від KDE Plasma Desktop та всіх K-додатків"
 echo "========================================================================"
 
-# Повний список KDE Plasma компонентів та блоатвару для видалення
+# Виправлення симлінку диспетчера входу для SDDM
+rm -f /etc/systemd/system/display-manager.service 2>/dev/null || true
+
+# Повний список KDE Plasma компонентів та непотрібних програм для видалення
 DEBLOAT_PACKAGES=(
-    # KDE Plasma Desktop & Shell (Niri є єдиним віконним менеджером!)
+    # KDE Plasma Desktop & Shell
     plasma-desktop
     plasma-workspace
     plasma-workspace-wayland
@@ -32,27 +35,36 @@ DEBLOAT_PACKAGES=(
     kde-cli-tools
     kservice
     kio-extras
+    systemsettings
     
-    # Зайві термінали та програвачі (є Kitty та VLC)
+    # Зайві програми з меню (є Helium, Thunar, Kitty, VLC)
+    firefox
     alacritty
     mpv mpv-libs mpv-devel
     konsole
     dolphin
+    gwenview
+    okular
+    neochat
+    spectacle
+    orca
+    plasma-discover
+    kolourpaint
+    ark
+    kwrite
+    skanpage
+    kamoso
+    partitionmanager
+    kcalc
+    filelight
+    kdebugsettings
+    kde-connect kde-connect-libs
 
-    # KWallet (нав'язливі спливаючі вікна паролів)
+    # KWallet
     kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager kf5-kwallet kf6-kwallet kf6-kwallet-libs
 
-    # Зайві KDE утиліти та утиліти доступності
-    kmouth
-    kcharselect
-    kamera
-    sweeper
-    kfind
-    kget
-    krdc
-    krfb krfb-libs
-    kjournald
-    krenamer
+    # Зайві KDE утиліти
+    kmouth kcharselect kamera sweeper kfind kget krdc krfb kjournald krenamer
 
     # Ігри KDE
     kmahjongg kpat kmines ksudoku knavalbattle kbounce kblocks klines kreversi
@@ -63,24 +75,22 @@ DEBLOAT_PACKAGES=(
     # Пошта, поштові служби та застарілі програвачі
     dragonplayer elisa-player ktorrent kmail kontact kaddressbook korganizer akregator
 
-    # Застарілі утиліти та додаткові офісні пакети
-    "libreoffice*"
-    gnome-tour
-    gnome-boxes
-    mediawriter
+    # Додаткові офісні пакети
+    "libreoffice*" gnome-tour gnome-boxes mediawriter
 )
 
-echo "🚀 Видалення KDE Plasma Desktop та блоатвару (--noautoremove для захисту SDDM)..."
+echo "🚀 Видалення KDE Plasma Desktop та блоатвару (--noautoremove)..."
 for pkg in "${DEBLOAT_PACKAGES[@]}"; do
     dnf remove -y --noautoremove "$pkg" 2>/dev/null || true
 done
 
-echo "🛡️ Гарантований захист SDDM, Firewalld, Pipewire та порталів для Niri..."
+echo "🛡️ Реєстрація чистих служб SDDM, Firewalld, Pipewire та порталів Niri..."
 dnf install -y --allowerasing sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite || true
 
+rm -f /etc/systemd/system/display-manager.service 2>/dev/null || true
 systemctl set-default graphical.target
 systemctl enable --now sddm firewalld || true
 
 echo "========================================================================"
-echo " 🎉 Очищення успішно завершено! KDE Plasma Desktop, Alacritty, MPV та KWallet видалено."
+echo " 🎉 Очищення успішно завершено! Всі KDE додатки та Firefox видалено."
 echo "========================================================================"
