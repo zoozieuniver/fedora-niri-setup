@@ -125,9 +125,10 @@ Inherits=Deltarune-Dark-Cursors
 EOF
 
 # ------------------------------------------------------------------------------
-# 6. CONFIGURE SDDM DISPLAY MANAGER
+# 6. CONFIGURE SDDM DISPLAY MANAGER & SSH SERVICE
 # ------------------------------------------------------------------------------
-echo "🖥️ Configuring SDDM Display Manager for Niri..."
+echo "🖥️ Configuring SDDM Display Manager & SSH service for Niri..."
+sudo systemctl enable --now sshd || true
 sudo systemctl set-default graphical.target
 sudo systemctl enable --now sddm || true
 
