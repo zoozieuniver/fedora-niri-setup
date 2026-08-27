@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V25 PERFECT)
+# FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V26 MULTI-MONITOR PERFECT)
 # ==============================================================================
 set -e
 
@@ -62,7 +62,7 @@ sudo dnf install -y --allowerasing --skip-unavailable --nogpgcheck \
     protontricks mangohud gamemode gamescope waydroid cups gutenprint hplip firewalld gcc gcc-c++ \
     clang clang-tools-extra gdb nasm make cmake ninja-build cargo rust rust-analyzer nodejs \
     python3 python3-pip pipx git wget curl jq file-roller zip unzip p7zip p7zip-plugins unrar \
-    apr apr-util zlib zlib-devel libpng12 libxcrypt-compat libxcrypt swww swaybg kernel-headers kernel-devel 2>/dev/null || true
+    apr apr-util zlib zlib-devel libpng12 libxcrypt-compat libxcrypt swww swaybg hyprpaper kernel-headers kernel-devel 2>/dev/null || true
 
 # Tailscale
 curl -fsSL https://tailscale.com/install.sh | sh || true
@@ -178,6 +178,64 @@ Terminal=false
 Categories=Game;Utility;
 EOF
 
+# ------------------------------------------------------------------------------
+# 5. UNPACK DOTFILES & APPLY MULTI-MONITOR OUTPUTS & WORKSPACES
+# ------------------------------------------------------------------------------
+ARCHIVE_PATH=$(find "$SCRIPT_DIR" "$USER_HOME/fedora-niri-setup" "$USER_HOME/Downloads" "$USER_HOME/Завантаження" ./ /tmp -iname "all-customizations-and-dotfiles.tar.gz" 2>/dev/null | head -n 1 || true)
+if [ -n "$ARCHIVE_PATH" ] && [ -f "$ARCHIVE_PATH" ]; then
+    echo "🎨 Unpacking master customizations from: $ARCHIVE_PATH..."
+    tar -xzf "$ARCHIVE_PATH" -C "$USER_HOME" 2>/dev/null || true
+    find "$USER_HOME/.config/niri" "$USER_HOME/.local/bin" "$USER_HOME/.config/wofi" -type f -exec sed -i "s|/home/zoozienix|$USER_HOME|g" {} + 2>/dev/null || true
+    find "$USER_HOME/.config/niri" "$USER_HOME/.local/bin" "$USER_HOME/.config/wofi" -type f -exec sed -i "s|/home/zoozie_fedora|$USER_HOME|g" {} + 2>/dev/null || true
+fi
+
+# Configure Host PC Multi-Monitor Outputs (DP-1 at 0,0 & HDMI-A-1 at 2048,0)
+cat << 'EOF' > "$USER_HOME/.config/niri/outputs.kdl"
+output "DP-1" {
+    position x=0 y=0
+    scale 1.25
+    focus-at-startup
+}
+
+output "HDMI-A-1" {
+    position x=2048 y=0
+    scale 1.0
+}
+EOF
+
+# Bind Workspaces 1-4 to DP-1 and 5-8 to HDMI-A-1
+cat << 'EOF' > "$USER_HOME/.config/niri/workspaces.kdl"
+workspace "1" {
+    open-on-output "DP-1"
+}
+workspace "2" {
+    open-on-output "DP-1"
+}
+workspace "3" {
+    open-on-output "DP-1"
+}
+workspace "4" {
+    open-on-output "DP-1"
+}
+workspace "5" {
+    open-on-output "HDMI-A-1"
+}
+workspace "6" {
+    open-on-output "HDMI-A-1"
+}
+workspace "7" {
+    open-on-output "HDMI-A-1"
+}
+workspace "8" {
+    open-on-output "HDMI-A-1"
+}
+EOF
+
+# Fix Wofi style.css relative soul.png pathing
+if [ -f "$USER_HOME/.config/wofi/style.css" ]; then
+    sed -i 's|file:///home/[^/]*/.config/wofi/soul.png|soul.png|g' "$USER_HOME/.config/wofi/style.css" || true
+fi
+
 # GTK Settings
 mkdir -p "$USER_HOME/.config/gtk-3.0" "$USER_HOME/.config/gtk-4.0"
 cat << 'EOF' > "$USER_HOME/.config/gtk-3.0/settings.ini"
@@ -191,7 +249,7 @@ EOF
 cp "$USER_HOME/.config/gtk-3.0/settings.ini" "$USER_HOME/.config/gtk-4.0/settings.ini" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 5. PURGE BLOATWARE & ENABLE SERVICES
+# 6. PURGE BLOATWARE & ENABLE SERVICES
 # ------------------------------------------------------------------------------
 EXACT_DEBLOAT_PACKAGES=(
     gnome-abrt abrt-libs abrt-gui-libs abrt-desktop abrt setroubleshoot-server setroubleshoot-plugins setroubleshoot
