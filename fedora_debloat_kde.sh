@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#  fedora_debloat_kde.sh — Повне очищення від блоатвару (Alacritty, MPV, KWallet, Firewall, KGames)
+#  fedora_debloat_kde.sh — Повне очищення від блоатвару (Alacritty, MPV, KWallet, KGames)
 # ==============================================================================
-#  Видаляє Alacritty, MPV, KWallet, K-ігри, K-утиліти та Firewall БЕЗ ВТРАТИ SDDM/DISCORD!
+#  Видаляє Alacritty, MPV, KWallet, K-ігри та K-утиліти БЕЗ ВТРАТИ SDDM/FIREWALL!
 # ==============================================================================
 
 set -euo pipefail
@@ -13,10 +13,10 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 echo "========================================================================"
-echo " 🧹 Повне очищення системи (Alacritty, MPV, KWallet, Firewall, K-ігри)"
+echo " 🧹 Повне очищення системи (Alacritty, MPV, KWallet, K-ігри)"
 echo "========================================================================"
 
-# Список НЕПОТРІБНИХ програм та утиліт для видалення
+# Список НЕПОТРІБНИХ програм та утиліт для видалення (ЗБЕРЕЖЕНО FirewallD!)
 DEBLOAT_PACKAGES=(
     # Зайві термінали та програвачі (є Kitty та VLC)
     alacritty
@@ -26,9 +26,6 @@ DEBLOAT_PACKAGES=(
 
     # KWallet (нав'язливі спливаючі вікна паролів)
     kwalletmanager5 pam-kwallet signon-kwallet-extension kwalletmanager
-
-    # Мережевий екран (Firewall)
-    firewall-config firewalld firewalld-filesystem python3-firewall
 
     # Зайві KDE утиліти та утиліти доступності
     kmouth
@@ -61,12 +58,12 @@ DEBLOAT_PACKAGES=(
 echo "🚀 Видалення розширеного списку блоатвару (--noautoremove для захисту SDDM)..."
 dnf remove -y --noautoremove "${DEBLOAT_PACKAGES[@]}" || true
 
-echo "🛡️ Гарантований захист SDDM, Pipewire та порталів для трансляції екрану в Discord..."
-dnf install -y sddm sddm-kcm xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite
+echo "🛡️ Гарантований захист SDDM, Firewalld, Pipewire та порталів для трансляції в Discord..."
+dnf install -y sddm sddm-kcm firewalld firewall-config xdg-desktop-portal xdg-desktop-portal-gnome pipewire wireplumber xwayland-satellite
 
 systemctl set-default graphical.target
-systemctl enable --now sddm
+systemctl enable --now sddm firewalld
 
 echo "========================================================================"
-echo " 🎉 Очищення успішно завершено! Alacritty, MPV, KWallet, Firewall та K-блоатвар видалено."
+echo " 🎉 Очищення успішно завершено! Alacritty, MPV, KWallet та K-блоатвар видалено."
 echo "========================================================================"
