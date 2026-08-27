@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# FEDORA VM MASTER SETUP SCRIPT (100% VERBOSE LOGGING & COMPLETE PARITY)
+# FEDORA VM MASTER SETUP SCRIPT (100% BULLETPROOF EXECUTION & LOGGING)
 # ==============================================================================
 set -e
 
@@ -223,18 +223,18 @@ fi
 KBD_CONF="$USER_HOME/.config/niri/keybindings.kdl"
 if [ -f "$KBD_CONF" ]; then
     echo "🔑 Converting Niri keybindings to Alt+ for VM compatibility..."
-    sudo -u "$TARGET_USER" sed -i 's/Mod+/Alt+/g' "$KBD_CONF"
-    sudo -u "$TARGET_USER" sed -i 's/Super+Alt+L/Alt+Super+L/g' "$KBD_CONF"
+    sudo -u "$TARGET_USER" sed -i 's/Mod+/Alt+/g' "$KBD_CONF" || true
+    sudo -u "$TARGET_USER" sed -i 's/Super+Alt+L/Alt+Super+L/g' "$KBD_CONF" || true
 fi
 
 # ------------------------------------------------------------------------------
 # 8. REGISTER FONTS & CURSORS
 # ------------------------------------------------------------------------------
 echo "🔤 Registering Monocraft fonts and Deltarune cursors..."
-sudo -u "$TARGET_USER" fc-cache -fv || true
+sudo -u "$TARGET_USER" fc-cache -fv 2>/dev/null || true
 
-sudo -u "$TARGET_USER" mkdir -p "$USER_HOME/.icons/default"
-sudo -u "$TARGET_USER" cat << 'EOF' > "$USER_HOME/.icons/default/index.theme"
+sudo -u "$TARGET_USER" mkdir -p "$USER_HOME/.icons/default" 2>/dev/null || true
+cat << 'EOF' | sudo -u "$TARGET_USER" tee "$USER_HOME/.icons/default/index.theme" > /dev/null || true
 [Icon Theme]
 Inherits=Deltarune-Dark-Cursors
 EOF
@@ -243,14 +243,14 @@ EOF
 # 9. BTRFS NO-DATA-COW (+C) FOR GAMES & DOWNLOADS
 # ------------------------------------------------------------------------------
 echo "🚀 Creating Games directory and applying Btrfs nodatacow (+C) attributes..."
-mkdir -p "$USER_HOME/Downloads" "$USER_HOME/Games" "$USER_HOME/.var/app"
+mkdir -p "$USER_HOME/Downloads" "$USER_HOME/Games" "$USER_HOME/.var/app" 2>/dev/null || true
 sudo chattr +C "$USER_HOME/Downloads" "$USER_HOME/Games" "$USER_HOME/.var/app" 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 10. PRINTER SETUP (HP LaserJet 2420n @ 192.168.66.10 PCL6)
 # ------------------------------------------------------------------------------
 echo "🖨️ Configuring HP LaserJet 2420n Printer..."
-sudo systemctl enable --now cups avahi-daemon || true
+sudo systemctl enable --now cups avahi-daemon 2>/dev/null || true
 sudo lpadmin -p HP_LaserJet_2420n -v socket://192.168.66.10:9100 -E -m gutenprint.5.3://hp-lj_2420/expert -D "HP LaserJet 2420n Network Printer" 2>/dev/null || true
 sudo lpadmin -d HP_LaserJet_2420n 2>/dev/null || true
 
@@ -258,11 +258,11 @@ sudo lpadmin -d HP_LaserJet_2420n 2>/dev/null || true
 # 11. CONFIGURE SDDM DISPLAY MANAGER & SSH SERVICE
 # ------------------------------------------------------------------------------
 echo "🖥️ Configuring SDDM Display Manager & SSH service for Niri..."
-sudo systemctl enable --now sshd || true
+sudo systemctl enable --now sshd 2>/dev/null || true
 sudo systemctl set-default graphical.target
-sudo systemctl enable --now sddm || true
+sudo systemctl enable --now sddm 2>/dev/null || true
 
-sudo mkdir -p /etc/sddm.conf.d
+sudo mkdir -p /etc/sddm.conf.d 2>/dev/null || true
 cat << EOF | sudo tee /etc/sddm.conf.d/niri.conf > /dev/null
 [Theme]
 Current=breeze

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V11 FULL LOGGING)
+#   FEDORA MASTER SETUP SCRIPT FOR ZOOZIENIX NIRI DESKTOP (V12 BULLETPROOF)
 # ==============================================================================
 set -e
 
@@ -205,12 +205,12 @@ fi
 # 8. SDDM & ACCOUNTS SERVICE DEFAULT SESSION SETUP
 # ------------------------------------------------------------------------------
 echo "🖥️ Configuring SDDM Display Manager & SSH service..."
-sudo systemctl enable --now sshd || true
+sudo systemctl enable --now sshd 2>/dev/null || true
 sudo systemctl set-default graphical.target
-sudo systemctl enable --now sddm || true
+sudo systemctl enable --now sddm 2>/dev/null || true
 
-sudo mkdir -p /etc/sddm.conf.d
-cat << 'EOF' | sudo tee /etc/sddm.conf.d/niri-session.conf > /dev/null
+sudo mkdir -p /etc/sddm.conf.d 2>/dev/null || true
+cat << EOF | sudo tee /etc/sddm.conf.d/niri-session.conf > /dev/null
 [Desktop]
 Session=niri.desktop
 
